@@ -47,7 +47,13 @@ class WebAppInterface(
             when (outcome) {
                 is AuthOutcome.Success -> eventSink.emit(
                     "auth:success",
-                    JSONObject().put("uid", outcome.uid).put("email", outcome.email).toString(),
+                    JSONObject()
+                        .put("uid", outcome.uid)
+                        .put("email", outcome.email)
+                        .put("name", outcome.name)
+                        .put("activeRole", outcome.activeRole)
+                        .put("roles", JSONArray(outcome.roles))
+                        .toString(),
                 )
                 is AuthOutcome.Error -> emitError(outcome.message)
             }
