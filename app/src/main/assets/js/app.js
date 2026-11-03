@@ -25,6 +25,8 @@
   const caseMessage = document.getElementById('caseMessage');
   const caseList = document.getElementById('caseList');
   const logoutButton = document.getElementById('logoutButton');
+  const vetLogoutButton = document.getElementById('vetLogoutButton');
+  const adminLogoutButton = document.getElementById('adminLogoutButton');
   const reportTitle = document.getElementById('reportTitle');
   const reportHeader = document.getElementById('reportHeader');
   const reportLead = document.getElementById('reportLead');
@@ -76,6 +78,37 @@
     if (window.Android && typeof window.Android.loadMyCases === 'function') {
       Android.loadMyCases();
     }
+  };
+
+  const openPortalForRole = (data) => {
+    const role = data && data.activeRole ? data.activeRole : '';
+    const displayName = data && data.name ? data.name : (data && data.email ? data.email : 'Usuario');
+
+    if (role === 'citizen') {
+      const signedInUser = document.getElementById('signedInUser');
+      if (signedInUser) signedInUser.textContent = `Sesión: ${displayName}`;
+      go('home');
+      requestMyAnimals();
+      requestMyCases();
+      return;
+    }
+
+    if (role === 'veterinarian') {
+      const vetSignedInUser = document.getElementById('vetSignedInUser');
+      if (vetSignedInUser) vetSignedInUser.textContent = `Sesión: ${displayName}`;
+      go('vet-home');
+      return;
+    }
+
+    if (role === 'administrator') {
+      const adminSignedInUser = document.getElementById('adminSignedInUser');
+      if (adminSignedInUser) adminSignedInUser.textContent = `Sesión: ${displayName}`;
+      go('admin-home');
+      return;
+    }
+
+    setMessage(authMessage, 'El rol de esta cuenta no está habilitado.', 'error');
+    if (window.Android && typeof window.Android.logout === 'function') Android.logout();
   };
 
   const reportLabels = {
@@ -238,12 +271,8 @@
         setAuthBusy(false);
         setMessage(authMessage, '');
         setMessage(signupMessage, '');
-        const signedInUser = document.getElementById('signedInUser');
-        if (signedInUser) signedInUser.textContent = data.email ? `Sesión: ${data.email}` : 'Sesión autenticada.';
         if (eventName === 'auth:registered') toast('Cuenta ciudadana creada correctamente.');
-        go('home');
-        requestMyAnimals();
-        requestMyCases();
+        openPortalForRole(data);
         return;
       }
 
@@ -370,11 +399,6 @@
       document.querySelectorAll('[data-sterilized]').forEach(b => b.classList.remove('selected-choice'));
       button.classList.add('selected-choice');
     });
-  });
-
-  const mapButton = document.getElementById('mapButton');
-  if (mapButton) mapButton.addEventListener('click', () => {
-    toast('Mapa pendiente para un siguiente avance.');
   });
 
   if (saveAnimalButton) saveAnimalButton.addEventListener('click', () => {
