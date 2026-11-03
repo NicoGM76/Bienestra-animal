@@ -28,11 +28,11 @@ class FirebaseAuthGateway(
 
                 firestore.collection("users").document(user.uid)
                     .get()
-                    .addOnSuccessListener { document ->
+                    .addOnSuccessListener profile@{ document ->
                         if (!document.exists()) {
                             auth.signOut()
                             callback(AuthOutcome.Error("La cuenta no tiene un perfil registrado."))
-                            return@addOnSuccessListener
+                            return@profile
                         }
 
                         val name = document.getString("name").orEmpty()
@@ -45,13 +45,13 @@ class FirebaseAuthGateway(
                         if (status != "active") {
                             auth.signOut()
                             callback(AuthOutcome.Error("La cuenta no se encuentra activa."))
-                            return@addOnSuccessListener
+                            return@profile
                         }
 
                         if (activeRole.isBlank() || activeRole !in roles || activeRole !in supportedRoles) {
                             auth.signOut()
                             callback(AuthOutcome.Error("El perfil de usuario no tiene un rol válido para esta versión."))
-                            return@addOnSuccessListener
+                            return@profile
                         }
 
                         callback(
