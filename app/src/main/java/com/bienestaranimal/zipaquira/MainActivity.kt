@@ -9,6 +9,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import com.bienestaranimal.zipaquira.auth.FirebaseAuthGateway
+import com.bienestaranimal.zipaquira.admin.FirebaseAdminGateway
 import com.bienestaranimal.zipaquira.animals.FirebaseAnimalGateway
 import com.bienestaranimal.zipaquira.cases.FirebaseCaseGateway
 import com.bienestaranimal.zipaquira.web.AppNavigationPolicy
@@ -48,9 +49,10 @@ class MainActivity : AppCompatActivity() {
         val authGateway = FirebaseAuthGateway()
         val animalGateway = FirebaseAnimalGateway()
         val caseGateway = FirebaseCaseGateway()
+        val adminGateway = FirebaseAdminGateway()
         val eventSink = WebViewEventSink(webView)
         webView.addJavascriptInterface(
-            WebAppInterface(this, authGateway, animalGateway, caseGateway, eventSink),
+            WebAppInterface(this, authGateway, animalGateway, caseGateway, adminGateway, eventSink),
             "Android",
         )
         webView.loadUrl(AppNavigationPolicy.ROOT_URL)
