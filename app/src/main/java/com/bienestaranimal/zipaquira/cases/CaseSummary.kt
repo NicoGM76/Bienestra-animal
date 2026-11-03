@@ -6,4 +6,7 @@ data class CaseSummary(
     val status: String,
     val finalPriority: String,
     val neighborhoodOrVillage: String,
+    val addressOrLocation: String,
+    val referencePoint: String,
+    val animalCondition: String,
 )
