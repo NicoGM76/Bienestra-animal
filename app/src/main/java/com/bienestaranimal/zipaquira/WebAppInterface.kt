@@ -6,6 +6,8 @@ import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.widget.Toast
 import com.bienestaranimal.zipaquira.auth.AuthGateway
+import com.bienestaranimal.zipaquira.admin.AdminGateway
+import com.bienestaranimal.zipaquira.admin.AdminOutcome
 import com.bienestaranimal.zipaquira.auth.AuthInputValidator
 import com.bienestaranimal.zipaquira.auth.AuthOutcome
 import com.bienestaranimal.zipaquira.animals.AnimalDraft
@@ -30,6 +32,7 @@ class WebAppInterface(
     private val authGateway: AuthGateway,
     private val animalGateway: AnimalGateway,
     private val caseGateway: CaseGateway,
+    private val adminGateway: AdminGateway,
     private val eventSink: WebEventSink,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -238,6 +241,20 @@ class WebAppInterface(
     }
 
     @JavascriptInterface
+    fun loadAdminDashboard() {
+        eventSink.emit("admin:loading", "{}")
+        adminGateway.loadDashboard { outcome ->
+            when (outcome) {
+                is AdminOutcome.Loaded -> emitAdminDashboard(outcome)
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+            }
+        }
+    }
+
+    @JavascriptInterface
     fun showToast(message: String) {
         val safeMessage = BridgeMessagePolicy.sanitize(message) ?: return
         mainHandler.post {
@@ -281,6 +298,55 @@ class WebAppInterface(
             )
         }
         eventSink.emit("cases:list", JSONObject().put("cases", cases).toString())
+    }
+
+    private fun emitAdminDashboard(outcome: AdminOutcome.Loaded) {
+        val users = JSONArray()
+        outcome.users.forEach { user ->
+            users.put(
+                JSONObject()
+                    .put("uid", user.uid)
+                    .put("name", user.name)
+                    .put("email", user.email)
+                    .put("activeRole", user.activeRole)
+                    .put("status", user.status),
+            )
+        }
+
+        val animals = JSONArray()
+        outcome.animals.forEach { animal ->
+            animals.put(
+                JSONObject()
+                    .put("id", animal.id)
+                    .put("name", animal.name)
+                    .put("species", animal.species)
+                    .put("status", animal.status),
+            )
+        }
+
+        val cases = JSONArray()
+        outcome.cases.forEach { item ->
+            cases.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("type", item.type)
+                    .put("status", item.status)
+                    .put("finalPriority", item.finalPriority)
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage),
+            )
+        }
+
+        eventSink.emit(
+            "admin:dashboard",
+            JSONObject()
+                .put("userCount", outcome.userCount)
+                .put("animalCount", outcome.animalCount)
+                .put("caseCount", outcome.caseCount)
+                .put("users", users)
+                .put("animals", animals)
+                .put("cases", cases)
+                .toString(),
+        )
     }
 
     private fun emitVeterinarianCaseList(outcome: CaseOutcome.Listed) {
