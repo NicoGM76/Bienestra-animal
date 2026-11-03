@@ -1,55 +1,93 @@
-# Firebase Demo - verificación en Android Studio
+# Firebase Demo — configuración de la Beta
 
-Este proyecto usa Firebase **solo en el flavor `demo`**. Producción permanece sin credenciales hasta crear el proyecto institucional correspondiente.
+La variante `demo` usa el proyecto Firebase de pruebas. Las credenciales institucionales no se guardan en Git.
 
-## Configuración que debe existir en Firebase Console
+## Configuración base
 
-1. Proyecto: `bienestar-animal-zipaquira`.
-2. App Android Demo: `com.bienestaranimal.zipaquira.demo`.
-3. En **Firebase Authentication**, habilitar el proveedor **Correo electrónico/Contraseña**.
-4. Crear **Cloud Firestore** para el proyecto Demo.
-5. Publicar el contenido de `firestore.rules` antes de usar datos reales de prueba.
+1. Proyecto Firebase: `bienestar-animal-zipaquira`.
+2. App Android: `com.bienestaranimal.zipaquira.demo`.
+3. Firebase Authentication: proveedor **Correo electrónico/Contraseña** habilitado.
+4. Cloud Firestore activo.
+5. Publicar el archivo `firestore.rules` de la rama Beta.
 
 ## Archivo local
 
-El archivo de configuración Demo debe existir únicamente en:
+Debe existir:
 
 ```text
 app/src/demo/google-services.json
 ```
 
-No crear `app/src/prod/google-services.json` con las credenciales Demo.
+El archivo permanece fuera del repositorio mediante `.gitignore`.
 
-## Nota sobre Gradle Wrapper
+## Cuenta ciudadana
 
-Esta copia conserva `gradle/wrapper/gradle-wrapper.properties`, pero el entorno donde se preparó no pudo descargar `gradlew`, `gradlew.bat` ni `gradle-wrapper.jar`. Android Studio puede sincronizar el proyecto si resuelve Gradle desde el IDE; si solicita el Wrapper completo, hay que generarlo/copiarlos una sola vez en la PC con Android Studio antes de las pruebas. No es un cambio de lógica de la app.
+Se crea desde la aplicación. El perfil conserva:
 
-## Verificación en la otra PC
+```text
+roles = ["citizen"]
+activeRole = "citizen"
+accountType = "citizen"
+status = "active"
+```
 
-1. Abrir la raíz del proyecto en Android Studio.
-2. Esperar **Gradle Sync** y confirmar que no haya errores.
-3. En **Build Variants**, seleccionar `demoDebug`.
-4. Ejecutar primero en **Android 7 / API 24** y después en un Android moderno.
-5. Crear una cuenta ciudadana desde **Crear cuenta ciudadana**.
-6. Confirmar en Firebase Authentication que aparece el usuario.
-7. Confirmar en Cloud Firestore que aparece `users/{uid}` con:
-   - `roles = ["citizen"]`
-   - `activeRole = "citizen"`
-   - `accountType = "citizen"`
-   - `status = "active"`
-8. Cerrar/reabrir la app e iniciar sesión con la cuenta creada.
-9. Probar correo inválido, contraseña menor de 8 caracteres y contraseña incorrecta.
-10. Confirmar que la aplicación no ofrece selección de roles institucionales durante el registro.
+## Cuenta Veterinario de prueba
 
-## Pruebas de reglas
+1. Crear el usuario en Firebase Authentication.
+2. Copiar su UID.
+3. Crear manualmente `users/{UID}` en Firestore con:
 
-Cuando Firebase CLI esté disponible, ejecutar Firebase Emulator Suite para **Firebase Authentication** y **Cloud Firestore** antes de desplegar cambios de reglas. La prueba con emuladores queda pendiente del equipo que tenga Android SDK/Firebase CLI disponible.
+```text
+uid: "<UID>"
+name: "Veterinario Demo"
+email: "<correo usado en Authentication>"
+roles: ["veterinarian"]
+activeRole: "veterinarian"
+accountType: "institutional"
+status: "active"
+createdAt: timestamp
+```
 
-## Qué debe considerarse aprobado
+Para asignarle un caso existente, agregar o modificar manualmente en `cases/{caseId}`:
 
-- `demoDebug` compila.
-- El APK abre en Android 7/API 24 y Android moderno.
-- Registro ciudadano crea Auth + `users/{uid}`.
-- Login correcto entra al portal.
-- Credenciales incorrectas muestran error y no navegan al portal.
-- Ningún usuario puede autorregistrarse como funcionario, veterinario, coordinador o administrador.
+```text
+assignedTo: "<UID DEL VETERINARIO>"
+assignedRole: "veterinarian"
+status: "assigned"
+updatedAt: timestamp
+```
+
+No borrar los campos existentes del caso.
+
+## Cuenta Administrador de prueba
+
+1. Crear el usuario en Firebase Authentication.
+2. Copiar su UID.
+3. Crear manualmente `users/{UID}` en Firestore con:
+
+```text
+uid: "<UID>"
+name: "Administrador Demo"
+email: "<correo usado en Authentication>"
+roles: ["administrator"]
+activeRole: "administrator"
+accountType: "institutional"
+status: "active"
+createdAt: timestamp
+```
+
+El administrador de esta Beta es de solo lectura desde la aplicación.
+
+## Comprobaciones mínimas
+
+- Ciudadano entra al portal ciudadano y conserva sus animales/reportes.
+- Veterinario entra al portal veterinario y solo consulta sus casos asignados.
+- Veterinario puede pasar un caso de `assigned` a `in_progress` y luego a `completed`.
+- Administrador entra al portal administrador y carga métricas/listados.
+- Una cuenta sin perfil, inactiva o con rol inconsistente no entra a un portal.
+- No existe selección de rol institucional en el registro ciudadano.
+- El AndroidManifest no solicita permisos GPS.
+
+## Compatibilidad
+
+La Beta declara `minSdk 23`, pero la compatibilidad antigua completa sigue pendiente de diagnóstico. No debe presentarse como resuelta hasta tener ejecución estable y evidencia.
