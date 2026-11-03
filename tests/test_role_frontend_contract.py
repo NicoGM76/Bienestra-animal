@@ -22,6 +22,10 @@ class RoleFrontendContractTest(unittest.TestCase):
         self.assertNotIn('id="mapButton"', html)
         self.assertNotIn("Confirmar en mapa", html)
         self.assertNotIn("Mapa pendiente", js)
+        self.assertIn("currentRole", js)
+        self.assertIn("protectedScreenRoles", js)
+        self.assertIn("clearSessionData", js)
+        self.assertIn("history.replaceState", js)
 
 
 if __name__ == "__main__":
