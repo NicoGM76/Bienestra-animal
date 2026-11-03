@@ -10,6 +10,11 @@ class FirebaseCaseGateway(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) : CaseGateway {
 
+    private val allowedTransitions = setOf(
+        "assigned" to "in_progress",
+        "in_progress" to "completed",
+    )
+
     override fun saveCase(draft: CaseDraft, callback: (CaseOutcome) -> Unit) {
         val user = auth.currentUser
         if (user == null) {
@@ -65,19 +70,98 @@ class FirebaseCaseGateway(
             .whereEqualTo("createdBy", user.uid)
             .get()
             .addOnSuccessListener { snapshot ->
-                val cases = snapshot.documents.map { document ->
-                    CaseSummary(
-                        id = document.id,
-                        type = document.getString("type").orEmpty(),
-                        status = document.getString("status") ?: "received",
-                        finalPriority = document.getString("finalPriority") ?: "pending_review",
-                        neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
-                    )
-                }.sortedBy { it.type + it.neighborhoodOrVillage }
-                callback(CaseOutcome.Listed(cases))
+                callback(CaseOutcome.Listed(snapshot.documents.map(::toSummary).sortedBy { it.type + it.neighborhoodOrVillage }))
             }
             .addOnFailureListener { error -> callback(CaseOutcome.Error(userMessageFor(error))) }
     }
+
+    override fun listAssignedCases(callback: (CaseOutcome) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(CaseOutcome.Error("Debes iniciar sesión para consultar casos asignados."))
+            return
+        }
+
+        firestore.collection("cases")
+            .whereEqualTo("assignedTo", user.uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                callback(
+                    CaseOutcome.Listed(
+                        snapshot.documents
+                            .map(::toSummary)
+                            .sortedWith(compareBy<CaseSummary> { it.status }.thenBy { it.finalPriority })
+                    )
+                )
+            }
+            .addOnFailureListener { error -> callback(CaseOutcome.Error(userMessageFor(error))) }
+    }
+
+    override fun updateAssignedCaseStatus(
+        caseId: String,
+        newStatus: String,
+        callback: (CaseOutcome) -> Unit,
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(CaseOutcome.Error("Debes iniciar sesión para actualizar un caso."))
+            return
+        }
+
+        val normalizedId = caseId.trim()
+        val normalizedStatus = newStatus.trim()
+        if (normalizedId.isBlank()) {
+            callback(CaseOutcome.Error("El caso no es válido."))
+            return
+        }
+
+        val document = firestore.collection("cases").document(normalizedId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(document)
+            if (!snapshot.exists()) {
+                throw IllegalStateException("El caso no existe.")
+            }
+
+            val assignedTo = snapshot.getString("assignedTo").orEmpty()
+            if (assignedTo != user.uid) {
+                throw IllegalStateException("Este caso no está asignado a tu cuenta.")
+            }
+
+            val currentStatus = snapshot.getString("status").orEmpty()
+            if ((currentStatus to normalizedStatus) !in allowedTransitions) {
+                throw IllegalStateException("La transición de estado no está permitida.")
+            }
+
+            transaction.update(
+                document,
+                mapOf(
+                    "status" to normalizedStatus,
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+        }.addOnSuccessListener {
+            callback(CaseOutcome.Updated(normalizedId, normalizedStatus))
+        }.addOnFailureListener { error ->
+            val message = if (error is IllegalStateException) {
+                error.message ?: "No fue posible actualizar el caso."
+            } else {
+                userMessageFor(error)
+            }
+            callback(CaseOutcome.Error(message))
+        }
+    }
+
+    private fun toSummary(document: com.google.firebase.firestore.DocumentSnapshot): CaseSummary =
+        CaseSummary(
+            id = document.id,
+            type = document.getString("type").orEmpty(),
+            status = document.getString("status") ?: "received",
+            finalPriority = document.getString("finalPriority") ?: "pending_review",
+            neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
+            addressOrLocation = document.getString("addressOrLocation").orEmpty(),
+            referencePoint = document.getString("referencePoint").orEmpty(),
+            animalCondition = document.getString("animalCondition").orEmpty(),
+        )
 
     private fun userMessageFor(error: Exception): String = when (error) {
         is FirebaseNetworkException -> "No hay conexión con el servicio. Revisa tu Internet."
