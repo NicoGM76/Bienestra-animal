@@ -9,6 +9,30 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function hasActiveProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "active";
+    }
+
+    function isCitizen() {
+      return hasActiveProfile()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeRole == "citizen"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(["citizen"]);
+    }
+
+    function isVeterinarian() {
+      return hasActiveProfile()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeRole == "veterinarian"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(["veterinarian"]);
+    }
+
+    function isAdministrator() {
+      return hasActiveProfile()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeRole == "administrator"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(["administrator"]);
+    }
+
     function isCitizenProfile(data, uid) {
       return data.keys().hasAll([
         "uid",
@@ -27,46 +51,70 @@ service cloud.firestore {
       && data.status == "active";
     }
 
+    function veterinarianStatusTransitionAllowed() {
+      return (
+          resource.data.status == "assigned"
+          && request.resource.data.status == "in_progress"
+        ) || (
+          resource.data.status == "in_progress"
+          && request.resource.data.status == "completed"
+        );
+    }
+
     match /users/{uid} {
       allow create: if ownsUserDocument(uid)
                     && isCitizenProfile(request.resource.data, uid);
-      allow read: if ownsUserDocument(uid);
 
-      // La edición de perfiles se habilitará en un flujo específico.
-      // Mantenerla bloqueada ahora evita elevación de privilegios desde clientes.
+      allow read: if ownsUserDocument(uid)
+                  || isAdministrator();
+
+      // Los roles institucionales se administran fuera del cliente en esta Beta.
       allow update: if false;
       allow delete: if false;
     }
 
     match /animals/{animalId} {
-      allow create: if signedIn()
+      allow create: if isCitizen()
                     && request.resource.data.mainResponsibleId == request.auth.uid
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.status == "active"
                     && request.resource.data.origin == "citizen";
 
-      allow read: if signedIn()
-                  && resource.data.mainResponsibleId == request.auth.uid;
+      allow read: if (
+                    isCitizen()
+                    && resource.data.mainResponsibleId == request.auth.uid
+                  )
+                  || isAdministrator();
 
-      // La edición y eliminación se habilitarán con flujos auditados específicos.
       allow update: if false;
       allow delete: if false;
     }
 
-
     match /cases/{caseId} {
-      allow create: if signedIn()
+      allow create: if isCitizen()
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.status == "received"
                     && request.resource.data.municipality == "Zipaquirá"
                     && request.resource.data.type in ["lost", "found", "abuse"]
                     && request.resource.data.protectedIdentity == (request.resource.data.type == "abuse");
 
-      allow read: if signedIn()
-                  && resource.data.createdBy == request.auth.uid;
+      allow read: if (
+                    isCitizen()
+                    && resource.data.createdBy == request.auth.uid
+                  )
+                  || (
+                    isVeterinarian()
+                    && resource.data.assignedTo == request.auth.uid
+                  )
+                  || isAdministrator();
 
-      // La edición y eliminación de reportes se habilitarán con flujos auditados.
-      allow update: if false;
+      allow update: if isVeterinarian()
+                    && resource.data.assignedTo == request.auth.uid
+                    && request.resource.data.assignedTo == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+                    && veterinarianStatusTransitionAllowed()
+                    && request.resource.data.updatedAt == request.time;
+
       allow delete: if false;
     }
 
