@@ -1,0 +1,31 @@
+BIENESTAR ANIMAL ZIPAQUIRÁ - ETAPA 1
+
+Esta versión incluye:
+- Android 6+ (minSdk 23) y prueba objetivo Android 7/API 24
+- flavors demo/prod
+- WebViewAssetLoader
+- bloqueo de file://, HTTP y recursos externos dentro del WebView
+- puente JavaScript/Kotlin validado
+- política de red sin cleartext
+- compatibilidad JavaScript con WebView antiguo
+
+ABRIR
+1. Descomprime el ZIP.
+2. Android Studio > Open.
+3. Abre la carpeta raíz.
+4. Espera Gradle Sync.
+5. Build Variants > demoDebug.
+6. Ejecuta primero en Android 7/API 24 y luego en el moderno.
+
+GENERAR APK
+Build > Build Bundle(s) / APK(s) > Build APK(s).
+Ruta esperada: app/build/outputs/apk/demo/debug/app-demo-debug.apk
+
+PRUEBAS
+- arranque
+- login simulado
+- registro de animal
+- ubicación rural + guardado simulado
+
+NOTA
+La compilación final debe verificarse en Android Studio porque el entorno que preparó este ZIP no dispone del Android SDK completo.

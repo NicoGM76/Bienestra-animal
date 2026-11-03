@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsUserDocument(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isCitizenProfile(data, uid) {
+      return data.keys().hasAll([
+        "uid",
+        "name",
+        "email",
+        "roles",
+        "activeRole",
+        "accountType",
+        "status",
+        "createdAt"
+      ])
+      && data.uid == uid
+      && data.roles == ["citizen"]
+      && data.activeRole == "citizen"
+      && data.accountType == "citizen"
+      && data.status == "active";
+    }
+
+    match /users/{uid} {
+      allow create: if ownsUserDocument(uid)
+                    && isCitizenProfile(request.resource.data, uid);
+      allow read: if ownsUserDocument(uid);
+
+      // La edición de perfiles se habilitará en un flujo específico.
+      // Mantenerla bloqueada ahora evita elevación de privilegios desde clientes.
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    match /animals/{animalId} {
+      allow create: if signedIn()
+                    && request.resource.data.mainResponsibleId == request.auth.uid
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == "active"
+                    && request.resource.data.origin == "citizen";
+
+      allow read: if signedIn()
+                  && resource.data.mainResponsibleId == request.auth.uid;
+
+      // La edición y eliminación se habilitarán con flujos auditados específicos.
+      allow update: if false;
+      allow delete: if false;
+    }
+
+
+    match /cases/{caseId} {
+      allow create: if signedIn()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == "received"
+                    && request.resource.data.municipality == "Zipaquirá"
+                    && request.resource.data.type in ["lost", "found", "abuse"]
+                    && request.resource.data.protectedIdentity == (request.resource.data.type == "abuse");
+
+      allow read: if signedIn()
+                  && resource.data.createdBy == request.auth.uid;
+
+      // La edición y eliminación de reportes se habilitarán con flujos auditados.
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Denegación por defecto para toda colección aún no implementada.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

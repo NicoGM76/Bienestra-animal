@@ -1,0 +1,25 @@
+BIENESTAR ANIMAL ZIPAQUIRÁ — DEMO FINAL 0.3
+
+ANTES DE PRESENTAR
+1. Firebase > Firestore > Reglas: publicar firestore.rules de este ZIP.
+2. Authentication > Email/Password: debe estar habilitado.
+3. Android Studio > Build Variant: demoDebug.
+4. Probar en Android moderno y Android 7/API 24.
+
+DEMO DE 5 MINUTOS
+1. Crear ciudadano.
+2. Mostrar Authentication + users/{uid}.
+3. Registrar animal (recomendado: Cabra / Vereda).
+4. Ver animal en portal + animals/{id}.
+5. Reportar presunto maltrato con prioridad "Que la app la determine".
+6. Mostrar cases/{id}: status=received, protectedIdentity=true, finalPriority=pending_review.
+7. Volver al portal y mostrar "Mis reportes".
+8. Abrir Adopciones y aclarar que el catálogo está marcado DEMO.
+
+NO AFIRMAR AÚN
+- IA activa
+- GPS/mapa real
+- carga de fotos/video/audio
+- offline real
+- notificaciones push
+- roles institucionales funcionales

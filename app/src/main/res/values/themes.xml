@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BienestarAnimal" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#F4F1EA</item>
+        <item name="android:navigationBarColor">#F4F1EA</item>
+        <item name="colorPrimary">#2F5D7E</item>
+        <item name="colorPrimaryVariant">#254A64</item>
+        <item name="colorSecondary">#4C7A9F</item>
+    </style>
+</resources>

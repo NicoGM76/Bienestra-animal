@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F4F1EA" />
+  <title>Bienestar Animal Zipaquirá</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main id="app" class="app-shell">
+
+    <section class="screen active" data-screen="splash" aria-label="Bienvenida">
+      <div class="institution-bar">
+        <div class="shield">◇</div>
+        <div>
+          <strong>REPÚBLICA DE COLOMBIA</strong>
+          <span>Administración Municipal de Zipaquirá</span>
+        </div>
+      </div>
+      <div class="splash-content">
+        <img class="brand-logo" src="img/logo_baz.png" alt="Bienestar Animal Zipaquirá" />
+        <h1>Bienestar Animal</h1>
+        <p>Plataforma de gestión y bienestar animal para Zipaquirá, con enfoque prioritario en sus zonas rurales.</p>
+      </div>
+      <div class="splash-actions">
+        <button class="btn primary" data-go="login">Iniciar sesión</button>
+        <button class="btn ghost" data-go="signup">Crear cuenta ciudadana</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="login" aria-label="Ingreso al sistema">
+      <div class="institution-bar">
+        <div class="shield">◇</div>
+        <div>
+          <strong>REPÚBLICA DE COLOMBIA</strong>
+          <span>Acceso Institucional de Funcionarios y Ciudadanos</span>
+        </div>
+      </div>
+      <div class="page-content">
+        <button class="text-back" data-go="splash">← Volver</button>
+        <h1>Ingreso al Sistema</h1>
+        <p class="lead">Identifícate para realizar registros oficiales y reportes ante la Administración Municipal de Zipaquirá.</p>
+
+        <label>Correo Electrónico Ciudadano o Funcionario</label>
+        <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" />
+        <p class="helper">Usa tu correo institucional o personal registrado.</p>
+
+        <label>Contraseña</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+        <p class="helper">Debe tener al menos 8 caracteres.</p>
+
+        <button id="loginButton" class="btn primary block">Iniciar Sesión</button>
+        <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
+        <div class="auth-links">
+          <span>¿Aún no tienes cuenta?</span>
+          <button class="text-link" data-go="signup">Crear cuenta ciudadana</button>
+        </div>
+        <div class="info-box"><span>ⓘ</span><p>Los ciudadanos pueden crear su cuenta. Las cuentas institucionales son habilitadas por la administración.</p></div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="signup" aria-label="Crear cuenta ciudadana">
+      <div class="institution-bar">
+        <div class="shield">◇</div>
+        <div>
+          <strong>REPÚBLICA DE COLOMBIA</strong>
+          <span>Registro ciudadano · Bienestar Animal Zipaquirá</span>
+        </div>
+      </div>
+      <div class="page-content">
+        <button class="text-back" data-go="login">← Volver al ingreso</button>
+        <h1>Crear cuenta ciudadana</h1>
+        <p class="lead">Regístrate con los datos mínimos necesarios. Los roles institucionales no se solicitan desde esta pantalla.</p>
+
+        <label for="signupName">Nombre</label>
+        <input id="signupName" type="text" autocomplete="name" placeholder="Tu nombre" />
+
+        <label for="signupEmail">Correo electrónico</label>
+        <input id="signupEmail" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" />
+
+        <label for="signupPassword">Contraseña</label>
+        <input id="signupPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+        <p class="helper">Usa una contraseña que no reutilices en otros servicios.</p>
+
+        <button id="signupButton" class="btn primary block">Crear cuenta</button>
+        <p id="signupMessage" class="form-message" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="home" aria-label="Portal ciudadano">
+      <div class="online-banner">☁ <span>En línea</span></div>
+      <div class="page-content roomy">
+        <div class="user-row">
+          <div><h1>Portal ciudadano</h1><p class="lead compact" id="signedInUser">Sesión autenticada.</p></div>
+          <div class="avatar">BA</div>
+        </div>
+
+        <h2>TRÁMITES Y SERVICIOS</h2>
+        <div class="action-list">
+          <button class="action-card" data-go="register"><span class="action-icon">♧</span><span>Registrar Animal</span><b>›</b></button>
+          <button class="action-card report-action" data-report-type="lost"><span class="action-icon">⌕</span><span>Reportar Pérdida</span><b>›</b></button>
+          <button class="action-card report-action" data-report-type="found"><span class="action-icon">✋</span><span>Reportar Hallazgo</span><b>›</b></button>
+          <button class="action-card report-action" data-report-type="abuse"><span class="action-icon">◇</span><span>Reportar Presunto Maltrato</span><b>›</b></button>
+          <button class="action-card" data-go="adoptions"><span class="action-icon">♡</span><span>Consultar Adopciones</span><b>›</b></button>
+        </div>
+
+        <h2>MIS ANIMALES REGISTRADOS</h2>
+        <div id="animalList" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando tus animales…</strong>
+            <span>Consultando los registros asociados a tu cuenta.</span>
+          </div>
+        </div>
+        <button class="btn secondary block" data-go="register">＋ Agregar otro animal</button>
+
+        <h2>MIS REPORTES</h2>
+        <div id="caseList" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando tus reportes…</strong>
+            <span>Consultando los casos asociados a tu cuenta.</span>
+          </div>
+        </div>
+        <button id="logoutButton" class="btn ghost block">Cerrar sesión</button>
+        <p class="progress-note">Demo funcional: autenticación, perfiles, animales y reportes usan Firebase real.</p>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="register" aria-label="Registrar animal">
+      <div class="step-header"><button data-go="home">←</button><strong>Paso 1 de 2: Datos Básicos</strong><span>Siguiente: Ubicación</span></div>
+      <div class="page-content">
+        <h1>Registrar Nuevo Animal</h1>
+        <label>Nombre del Animal</label>
+        <input id="animalName" type="text" placeholder="Ej. Toby" />
+
+        <label>Especie</label>
+        <p class="helper strong">Selecciona la tarjeta que mejor represente a tu animal.</p>
+        <div class="species-grid" id="speciesGrid">
+          <button class="species selected" data-species="Perro"><span>♧</span>Perro</button>
+          <button class="species" data-species="Gato"><span>△</span>Gato</button>
+          <button class="species" data-species="Conejo"><span>♢</span>Conejo</button>
+          <button class="species" data-species="Ave"><span>⌁</span>Ave</button>
+          <button class="species" data-species="Caballo"><span>◇</span>Caballo</button>
+          <button class="species" data-species="Bovino"><span>□</span>Bovino</button>
+          <button class="species" data-species="Cerdo"><span>○</span>Cerdo</button>
+          <button class="species" data-species="Cabra"><span>⌃</span>Cabra</button>
+          <button class="species" data-species="Otro"><span>•••</span>Otro</button>
+        </div>
+
+        <div class="two-col">
+          <div><label for="animalBreed">Raza</label><input id="animalBreed" type="text" placeholder="Mestizo" /></div>
+          <div><label for="animalColor">Color</label><input id="animalColor" type="text" placeholder="Marrón y Blanco" /></div>
+          <div><label for="animalSex">Sexo</label><select id="animalSex"><option>Macho</option><option>Hembra</option><option>No determinado</option></select></div>
+          <div><label for="animalAge">Edad aproximada</label><input id="animalAge" type="text" placeholder="3 años" /></div>
+        </div>
+
+        <label for="animalSize">Tamaño</label>
+        <select id="animalSize"><option>Pequeño</option><option selected>Mediano</option><option>Grande</option></select>
+
+        <label>¿Esterilizado?</label>
+        <div class="choice-row">
+          <button class="choice yes selected-choice" data-sterilized="true">✓ <span><b>Sí</b><small>Ya esterilizado</small></span></button>
+          <button class="choice no" data-sterilized="false">× <span><b>No</b><small>Aún no</small></span></button>
+        </div>
+
+        <button class="btn primary block" data-go="location">Continuar con ubicación</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="location" aria-label="Ubicación del animal">
+      <div class="step-header"><button data-go="register">←</button><strong>Paso 2 de 2: Ubicación</strong><span>Registro animal</span></div>
+      <div class="page-content">
+        <div class="location-card">
+          <h1 class="section-title">Lugar de Residencia</h1>
+          <p class="lead">Completa la información según si tu dirección es urbana o rural.</p>
+
+          <label>Tipo de dirección</label>
+          <div class="direction-types">
+            <button class="direction selected" data-direction="Calle/Carrera/Avenida">Calle/Carrera/Avenida</button>
+            <button class="direction" data-direction="Vereda/Sector">Vereda/Sector</button>
+            <button class="direction" data-direction="Finca/Predio">Finca/Predio</button>
+          </div>
+
+          <label>Municipio</label>
+          <input id="animalMunicipality" value="Zipaquirá" readonly />
+          <label>Barrio / Vereda</label>
+          <input id="animalNeighborhoodOrVillage" placeholder="Ej. Vereda San Jorge" />
+          <label>Dirección o ubicación</label>
+          <input id="animalAddressOrLocation" placeholder="Ej. Finca El Recuerdo, sector Alto del Águila" />
+          <label>Punto de referencia</label>
+          <p class="helper">Ej: junto al puente, frente a la escuela.</p>
+          <input id="animalReferencePoint" placeholder="Ej. Entrada por la vía rural, portón verde" />
+          <button class="btn secondary block" id="mapButton">▧ Confirmar en mapa <small>próximo avance</small></button>
+        </div>
+        <button class="btn primary block" id="saveAnimal">Guardar animal</button>
+        <p id="animalMessage" class="form-message" role="status" aria-live="polite"></p>
+        <button class="btn ghost block" data-go="home">Volver al portal</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="report" aria-label="Crear reporte ciudadano">
+      <div class="step-header"><button data-go="home">←</button><strong id="reportHeader">Nuevo reporte</strong><span>Firebase</span></div>
+      <div class="page-content">
+        <div class="demo-badge">REPORTE REAL · FIRESTORE</div>
+        <h1 id="reportTitle">Nuevo reporte</h1>
+        <p id="reportLead" class="lead">Registra la información esencial. La Alcaldía podrá solicitar datos adicionales después.</p>
+
+        <label for="reportDescription">Descripción</label>
+        <textarea id="reportDescription" rows="5" placeholder="Describe qué ocurrió y qué observaste."></textarea>
+
+        <div class="two-col report-grid">
+          <div>
+            <label for="reportPriority">Prioridad</label>
+            <select id="reportPriority">
+              <option value="system">Que la app la determine</option>
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
+          </div>
+          <div>
+            <label for="reportAnimalCount">Cantidad</label>
+            <input id="reportAnimalCount" type="number" min="1" max="50" value="1" />
+          </div>
+        </div>
+
+        <label for="reportAnimalCondition">Estado del animal</label>
+        <select id="reportAnimalCondition">
+          <option value="">Selecciona una opción</option>
+          <option>Aparentemente estable</option>
+          <option>Herido</option>
+          <option>Sangrado</option>
+          <option>Débil</option>
+          <option>Desnutrido</option>
+          <option>Inmovilizado</option>
+          <option>Inconsciente</option>
+          <option>Fallecido</option>
+          <option>Otro</option>
+        </select>
+
+        <div class="location-card report-location">
+          <h2 class="section-title">Ubicación</h2>
+          <label for="reportMunicipality">Municipio</label>
+          <input id="reportMunicipality" value="Zipaquirá" readonly />
+          <label for="reportNeighborhoodOrVillage">Barrio / Vereda / Sector</label>
+          <input id="reportNeighborhoodOrVillage" placeholder="Ej. Vereda San Jorge" />
+          <label for="reportAddressOrLocation">Dirección o ubicación</label>
+          <input id="reportAddressOrLocation" placeholder="Ej. Finca El Recuerdo, sector Alto del Águila" />
+          <label for="reportReferencePoint">Punto de referencia</label>
+          <input id="reportReferencePoint" placeholder="Ej. Portón verde junto a la escuela" />
+        </div>
+
+        <label for="reportResponsibleKnown">¿Se conoce al responsable o cuidador?</label>
+        <select id="reportResponsibleKnown">
+          <option value="unknown">No se sabe</option>
+          <option value="yes">Sí</option>
+          <option value="no">No / animal de calle</option>
+        </select>
+        <label for="reportSuspectedResponsible">Información del presunto responsable <span class="optional">(opcional)</span></label>
+        <input id="reportSuspectedResponsible" placeholder="Nombre o descripción, si se conoce" />
+
+        <div id="protectedIdentityNotice" class="info-box sensitive-note" hidden>
+          <span>🔒</span><p><strong>Identidad protegida.</strong> En reportes sensibles tu identidad no se muestra al presunto responsable ni a otros ciudadanos.</p>
+        </div>
+
+        <div class="info-box"><span>📎</span><p>Fotos, video y audio son evidencia valiosa, pero se integrarán con Firebase Storage en el siguiente módulo. No son obligatorios para esta demo.</p></div>
+        <button id="saveCase" class="btn primary block">Enviar reporte</button>
+        <p id="caseMessage" class="form-message" role="status" aria-live="polite"></p>
+        <button class="btn ghost block" data-go="home">Cancelar</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="adoptions" aria-label="Catálogo de adopciones">
+      <div class="step-header"><button data-go="home">←</button><strong>Adopciones</strong><span>Presentación</span></div>
+      <div class="page-content">
+        <div class="demo-badge warning">CATÁLOGO DEMO</div>
+        <h1>Animales en adopción</h1>
+        <p class="lead">Datos ficticios para demostración. La publicación y aprobación institucional se conectarán al backend en una fase posterior.</p>
+        <div class="adoption-grid">
+          <article class="adoption-card"><div class="adoption-icon">🐕</div><div><strong>Canela</strong><span>Perra · 2 años · Mediana</span><em class="status ok">Disponible</em><p>Sociable, esterilizada y apta para hogar familiar.</p></div></article>
+          <article class="adoption-card"><div class="adoption-icon">🐈</div><div><strong>Nube</strong><span>Gato · 1 año · Pequeño</span><em class="status ok">Disponible</em><p>Tranquilo y acostumbrado al contacto con personas.</p></div></article>
+          <article class="adoption-card"><div class="adoption-icon">🐐</div><div><strong>Brisa</strong><span>Cabra · Joven · Rural</span><em class="status review">Revisión institucional</em><p>Ejemplo rural para mostrar el alcance inclusivo del sistema.</p></div></article>
+        </div>
+        <div class="info-box"><span>ⓘ</span><p>En producción, un ciudadano solicitará publicar un animal y la Alcaldía deberá aprobarlo antes de hacerlo visible.</p></div>
+        <button class="btn ghost block" data-go="home">Volver al portal</button>
+      </div>
+    </section>
+
+  </main>
+  <script src="js/app.js"></script>
+</body>
+</html>

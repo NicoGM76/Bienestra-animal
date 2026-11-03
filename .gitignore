@@ -1,0 +1,28 @@
+.gradle/
+.idea/
+local.properties
+build/
+*/build/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+.worktrees/
+
+__pycache__/
+*.py[cod]
+.superpowers/
+
+.worktrees/
+
+# Firmas y credenciales locales
+*.jks
+*.keystore
+
+# Configuración Firebase local
+google-services.json
+
+# Variables o secretos locales
+.env
+.env.*

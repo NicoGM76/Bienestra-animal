@@ -1,0 +1,26 @@
+FIREBASE DEMO - PRUEBAS
+1. Firebase Console: habilitar Email/Password.
+2. Crear Cloud Firestore en modo producción.
+3. Publicar firestore.rules del proyecto.
+4. Android Studio: Build Variant = demoDebug.
+5. Sync Project with Gradle Files.
+6. Build/Rebuild.
+7. Ejecutar primero en Android 7/API 24.
+8. Probar registro; verificar Authentication y users/{uid}.
+9. Probar cerrar sesión / iniciar sesión.
+10. Repetir en Android moderno.
+
+NOTA:
+Google Sign-In puede quedar habilitado en Firebase Console, pero esta versión
+todavía no implementa el botón/flujo Google en Android. Para eso también
+necesitaremos SHA-1.
+
+
+PRUEBA DE ANIMALES
+1. Publicar las reglas actualizadas de firestore.rules.
+2. Iniciar sesión con un ciudadano.
+3. Registrar un animal.
+4. En Firestore verificar animals/{animalId}.
+5. Confirmar mainResponsibleId = UID del usuario autenticado.
+6. Volver al portal y comprobar que el animal aparece en Mis animales registrados.
+7. Repetir en Android 7/API 24 y Android moderno.
