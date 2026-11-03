@@ -21,6 +21,8 @@ class RoleAuthContractTest(unittest.TestCase):
 
         self.assertIn('.put("activeRole", outcome.activeRole)', bridge)
         self.assertIn('.put("roles", JSONArray(outcome.roles))', bridge)
+        self.assertGreaterEqual(bridge.count('.put("activeRole", outcome.activeRole)'), 2)
+        self.assertGreaterEqual(bridge.count('.put("roles", JSONArray(outcome.roles))'), 2)
 
 
 if __name__ == "__main__":
