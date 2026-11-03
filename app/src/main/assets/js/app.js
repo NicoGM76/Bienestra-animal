@@ -27,6 +27,7 @@
   const logoutButton = document.getElementById('logoutButton');
   const vetLogoutButton = document.getElementById('vetLogoutButton');
   const adminLogoutButton = document.getElementById('adminLogoutButton');
+  const vetCaseList = document.getElementById('vetCaseList');
   const reportTitle = document.getElementById('reportTitle');
   const reportHeader = document.getElementById('reportHeader');
   const reportLead = document.getElementById('reportLead');
@@ -80,6 +81,12 @@
     }
   };
 
+  const requestVeterinarianCases = () => {
+    if (window.Android && typeof window.Android.loadAssignedCases === 'function') {
+      Android.loadAssignedCases();
+    }
+  };
+
   const openPortalForRole = (data) => {
     const role = data && data.activeRole ? data.activeRole : '';
     const displayName = data && data.name ? data.name : (data && data.email ? data.email : 'Usuario');
@@ -97,6 +104,7 @@
       const vetSignedInUser = document.getElementById('vetSignedInUser');
       if (vetSignedInUser) vetSignedInUser.textContent = `Sesión: ${displayName}`;
       go('vet-home');
+      requestVeterinarianCases();
       return;
     }
 
@@ -171,6 +179,68 @@
       grid.appendChild(card);
     });
     caseList.appendChild(grid);
+  };
+
+
+  const renderVeterinarianCases = (cases) => {
+    if (!vetCaseList) return;
+    while (vetCaseList.firstChild) vetCaseList.removeChild(vetCaseList.firstChild);
+
+    if (!Array.isArray(cases) || cases.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = 'No tienes casos asignados';
+      const detail = document.createElement('span');
+      detail.textContent = 'Cuando se asigne un caso a tu cuenta aparecerá aquí.';
+      empty.append(title, detail);
+      vetCaseList.appendChild(empty);
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'case-grid';
+    cases.forEach(item => {
+      const card = document.createElement('article');
+      card.className = 'case-card';
+
+      const top = document.createElement('div');
+      top.className = 'case-card-top';
+      const name = document.createElement('strong');
+      name.textContent = typeLabel(item.type);
+      const priority = document.createElement('em');
+      priority.className = item.finalPriority === 'critical' || item.finalPriority === 'high' ? 'status review' : 'status ok';
+      priority.textContent = priorityLabel(item.finalPriority);
+      top.append(name, priority);
+
+      const location = document.createElement('span');
+      location.textContent = [item.neighborhoodOrVillage, item.addressOrLocation].filter(Boolean).join(' · ') || 'Zipaquirá';
+
+      const condition = document.createElement('span');
+      condition.textContent = item.animalCondition ? `Condición: ${item.animalCondition}` : 'Condición no registrada';
+
+      const status = document.createElement('b');
+      status.textContent = `Estado: ${statusLabel(item.status)}`;
+
+      card.append(top, location, condition, status);
+
+      const nextStatus = item.status === 'assigned'
+        ? 'in_progress'
+        : (item.status === 'in_progress' ? 'completed' : '');
+
+      if (nextStatus) {
+        const action = document.createElement('button');
+        action.className = 'btn secondary block';
+        action.dataset.vetCaseId = item.id;
+        action.dataset.vetNextStatus = nextStatus;
+        action.textContent = nextStatus === 'in_progress' ? 'Iniciar atención' : 'Marcar como realizado';
+        card.appendChild(action);
+      }
+
+      grid.appendChild(card);
+    });
+
+    vetCaseList.appendChild(grid);
   };
 
   const resetCaseForm = () => {
@@ -335,6 +405,22 @@
         renderCaseList(data.cases || []);
         return;
       }
+
+      if (eventName === 'vet:cases') {
+        renderVeterinarianCases(data.cases || []);
+        return;
+      }
+
+      if (eventName === 'vet:case-updated') {
+        toast('Estado del caso actualizado.');
+        requestVeterinarianCases();
+        return;
+      }
+
+      if (eventName === 'vet:error') {
+        toast(data.message || 'No fue posible completar la operación veterinaria.');
+        return;
+      }
     }
   };
 
@@ -350,6 +436,15 @@
     if (reportAction) {
       event.preventDefault();
       configureReport(reportAction.dataset.reportType);
+      return;
+    }
+
+    const vetAction = event.target.closest('[data-vet-case-id]');
+    if (vetAction) {
+      event.preventDefault();
+      if (window.Android && typeof window.Android.updateAssignedCaseStatus === 'function') {
+        Android.updateAssignedCaseStatus(vetAction.dataset.vetCaseId, vetAction.dataset.vetNextStatus);
+      }
     }
   });
 
@@ -457,13 +552,17 @@
 
 
 
-  if (logoutButton) logoutButton.addEventListener('click', () => {
+  const logout = () => {
     if (window.Android && typeof window.Android.logout === 'function') {
       Android.logout();
     } else {
       toast('Cerrar sesión requiere ejecutar la app Android.');
     }
-  });
+  };
+
+  if (logoutButton) logoutButton.addEventListener('click', logout);
+  if (vetLogoutButton) vetLogoutButton.addEventListener('click', logout);
+  if (adminLogoutButton) adminLogoutButton.addEventListener('click', logout);
 
 
   window.addEventListener('popstate', (event) => {
