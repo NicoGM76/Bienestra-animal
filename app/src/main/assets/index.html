@@ -126,6 +126,49 @@
       </div>
     </section>
 
+
+    <section class="screen" data-screen="vet-home" aria-label="Portal veterinario">
+      <div class="online-banner">☁ <span>En línea · Acceso veterinario</span></div>
+      <div class="page-content roomy">
+        <div class="user-row">
+          <div><h1>Portal veterinario</h1><p class="lead compact" id="vetSignedInUser">Sesión institucional.</p></div>
+          <div class="avatar">VT</div>
+        </div>
+        <div class="info-box"><span>ⓘ</span><p>Este portal muestra únicamente los casos asignados a la cuenta veterinaria autenticada.</p></div>
+        <h2>CASOS ASIGNADOS</h2>
+        <div id="vetCaseList" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando casos asignados…</strong>
+            <span>Solo se mostrarán los casos autorizados para esta cuenta.</span>
+          </div>
+        </div>
+        <button id="vetLogoutButton" class="btn ghost block">Cerrar sesión</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="admin-home" aria-label="Portal administrador">
+      <div class="online-banner">☁ <span>En línea · Acceso administrador</span></div>
+      <div class="page-content roomy">
+        <div class="user-row">
+          <div><h1>Portal administrador</h1><p class="lead compact" id="adminSignedInUser">Sesión institucional.</p></div>
+          <div class="avatar">AD</div>
+        </div>
+        <div class="info-box"><span>🔒</span><p>Vista institucional de solo lectura para esta Beta.</p></div>
+        <h2>RESUMEN</h2>
+        <div id="adminMetrics" class="metric-grid" aria-live="polite">
+          <div class="metric-card"><strong>—</strong><span>Usuarios</span></div>
+          <div class="metric-card"><strong>—</strong><span>Animales</span></div>
+          <div class="metric-card"><strong>—</strong><span>Casos</span></div>
+        </div>
+        <h2>ACTIVIDAD RECIENTE</h2>
+        <div id="adminRecentList" class="empty-state">
+          <strong>Cargando información institucional…</strong>
+          <span>Los datos se consultarán desde Firestore.</span>
+        </div>
+        <button id="adminLogoutButton" class="btn ghost block">Cerrar sesión</button>
+      </div>
+    </section>
+
     <section class="screen" data-screen="register" aria-label="Registrar animal">
       <div class="step-header"><button data-go="home">←</button><strong>Paso 1 de 2: Datos Básicos</strong><span>Siguiente: Ubicación</span></div>
       <div class="page-content">
@@ -190,7 +233,6 @@
           <label>Punto de referencia</label>
           <p class="helper">Ej: junto al puente, frente a la escuela.</p>
           <input id="animalReferencePoint" placeholder="Ej. Entrada por la vía rural, portón verde" />
-          <button class="btn secondary block" id="mapButton">▧ Confirmar en mapa <small>próximo avance</small></button>
         </div>
         <button class="btn primary block" id="saveAnimal">Guardar animal</button>
         <p id="animalMessage" class="form-message" role="status" aria-live="polite"></p>
