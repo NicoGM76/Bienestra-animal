@@ -28,6 +28,8 @@
   const vetLogoutButton = document.getElementById('vetLogoutButton');
   const adminLogoutButton = document.getElementById('adminLogoutButton');
   const vetCaseList = document.getElementById('vetCaseList');
+  const adminMetrics = document.getElementById('adminMetrics');
+  const adminRecentList = document.getElementById('adminRecentList');
   const reportTitle = document.getElementById('reportTitle');
   const reportHeader = document.getElementById('reportHeader');
   const reportLead = document.getElementById('reportLead');
@@ -87,6 +89,12 @@
     }
   };
 
+  const requestAdminDashboard = () => {
+    if (window.Android && typeof window.Android.loadAdminDashboard === 'function') {
+      Android.loadAdminDashboard();
+    }
+  };
+
   const openPortalForRole = (data) => {
     const role = data && data.activeRole ? data.activeRole : '';
     const displayName = data && data.name ? data.name : (data && data.email ? data.email : 'Usuario');
@@ -112,6 +120,7 @@
       const adminSignedInUser = document.getElementById('adminSignedInUser');
       if (adminSignedInUser) adminSignedInUser.textContent = `Sesión: ${displayName}`;
       go('admin-home');
+      requestAdminDashboard();
       return;
     }
 
@@ -241,6 +250,44 @@
     });
 
     vetCaseList.appendChild(grid);
+  };
+
+
+  const renderAdminDashboard = (data) => {
+    if (adminMetrics) {
+      const cards = adminMetrics.querySelectorAll('.metric-card strong');
+      if (cards[0]) cards[0].textContent = String(data.userCount || 0);
+      if (cards[1]) cards[1].textContent = String(data.animalCount || 0);
+      if (cards[2]) cards[2].textContent = String(data.caseCount || 0);
+    }
+
+    if (!adminRecentList) return;
+    while (adminRecentList.firstChild) adminRecentList.removeChild(adminRecentList.firstChild);
+
+    const sections = [
+      { title: 'Usuarios', items: data.users || [], describe: item => [item.name, item.activeRole, item.status].filter(Boolean).join(' · ') },
+      { title: 'Animales', items: data.animals || [], describe: item => [item.name, item.species, item.status].filter(Boolean).join(' · ') },
+      { title: 'Casos', items: data.cases || [], describe: item => [typeLabel(item.type), statusLabel(item.status), item.neighborhoodOrVillage].filter(Boolean).join(' · ') }
+    ];
+
+    sections.forEach(section => {
+      const heading = document.createElement('strong');
+      heading.textContent = section.title;
+      adminRecentList.appendChild(heading);
+
+      if (!section.items.length) {
+        const empty = document.createElement('span');
+        empty.textContent = 'Sin registros para mostrar.';
+        adminRecentList.appendChild(empty);
+        return;
+      }
+
+      section.items.forEach(item => {
+        const row = document.createElement('span');
+        row.textContent = section.describe(item);
+        adminRecentList.appendChild(row);
+      });
+    });
   };
 
   const resetCaseForm = () => {
@@ -419,6 +466,16 @@
 
       if (eventName === 'vet:error') {
         toast(data.message || 'No fue posible completar la operación veterinaria.');
+        return;
+      }
+
+      if (eventName === 'admin:dashboard') {
+        renderAdminDashboard(data);
+        return;
+      }
+
+      if (eventName === 'admin:error') {
+        toast(data.message || 'No fue posible cargar el panel administrativo.');
         return;
       }
     }
