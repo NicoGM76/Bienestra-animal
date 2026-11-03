@@ -1,9 +1,23 @@
 (() => {
   const screens = [...document.querySelectorAll('.screen')];
+  let currentRole = '';
+  const protectedScreenRoles = {
+    home: 'citizen',
+    register: 'citizen',
+    location: 'citizen',
+    report: 'citizen',
+    adoptions: 'citizen',
+    'vet-home': 'veterinarian',
+    'admin-home': 'administrator'
+  };
+
+  const canOpenScreen = (name) => !protectedScreenRoles[name] || protectedScreenRoles[name] === currentRole;
+
   const go = (name) => {
-    screens.forEach(s => s.classList.toggle('active', s.dataset.screen === name));
+    const safeName = canOpenScreen(name) ? name : 'login';
+    screens.forEach(s => s.classList.toggle('active', s.dataset.screen === safeName));
     window.scrollTo({ top: 0, behavior: 'instant' });
-    history.pushState({ screen: name }, '', `#${name}`);
+    history.pushState({ screen: safeName }, '', `#${safeName}`);
   };
 
   const toast = (message) => {
@@ -36,6 +50,30 @@
   const protectedIdentityNotice = document.getElementById('protectedIdentityNotice');
   let lastAuthAction = 'login';
   let currentReportType = 'lost';
+
+  const clearNode = (node) => {
+    if (!node) return;
+    while (node.firstChild) node.removeChild(node.firstChild);
+  };
+
+  const clearSessionData = () => {
+    currentRole = '';
+    clearNode(animalList);
+    clearNode(caseList);
+    clearNode(vetCaseList);
+    clearNode(adminRecentList);
+
+    if (adminMetrics) {
+      adminMetrics.querySelectorAll('.metric-card strong').forEach(value => {
+        value.textContent = '—';
+      });
+    }
+
+    ['signedInUser', 'vetSignedInUser', 'adminSignedInUser'].forEach(id => {
+      const label = document.getElementById(id);
+      if (label) label.textContent = 'Sesión cerrada.';
+    });
+  };
 
   const setMessage = (element, message, type = '') => {
     if (!element) return;
@@ -98,6 +136,7 @@
   const openPortalForRole = (data) => {
     const role = data && data.activeRole ? data.activeRole : '';
     const displayName = data && data.name ? data.name : (data && data.email ? data.email : 'Usuario');
+    currentRole = role;
 
     if (role === 'citizen') {
       const signedInUser = document.getElementById('signedInUser');
@@ -124,6 +163,7 @@
       return;
     }
 
+    currentRole = '';
     setMessage(authMessage, 'El rol de esta cuenta no está habilitado.', 'error');
     if (window.Android && typeof window.Android.logout === 'function') Android.logout();
   };
@@ -377,10 +417,10 @@
       }
 
       if (eventName === 'auth:signedout') {
-        const signedInUser = document.getElementById('signedInUser');
-        if (signedInUser) signedInUser.textContent = 'Sesión cerrada.';
+        clearSessionData();
         toast('Sesión cerrada.');
         go('login');
+        history.replaceState({ screen: 'login' }, '', '#login');
         return;
       }
 
@@ -623,10 +663,15 @@
 
 
   window.addEventListener('popstate', (event) => {
-    const requested = (event.state && event.state.screen) || location.hash.replace('#', '') || 'splash';
+    const rawRequested = (event.state && event.state.screen) || location.hash.replace('#', '') || 'splash';
+    const requested = canOpenScreen(rawRequested) ? rawRequested : 'login';
     screens.forEach(s => s.classList.toggle('active', s.dataset.screen === requested));
+    if (requested !== rawRequested) {
+      history.replaceState({ screen: requested }, '', `#${requested}`);
+    }
   });
 
-  const initial = location.hash.replace('#', '') || 'splash';
+  const rawInitial = location.hash.replace('#', '') || 'splash';
+  const initial = canOpenScreen(rawInitial) ? rawInitial : 'login';
   screens.forEach(s => s.classList.toggle('active', s.dataset.screen === initial));
 })();
