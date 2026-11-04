@@ -16,7 +16,7 @@ class AnimalBridgeContractTest(unittest.TestCase):
         self.assertIn('"animals:list"', bridge)
         self.assertIn('"animals:error"', bridge)
         self.assertIn('FirebaseAnimalGateway()', main)
-        self.assertIn('WebAppInterface(this, authGateway, animalGateway, caseGateway, eventSink)', main)
+        self.assertIn('WebAppInterface(this, authGateway, animalGateway, caseGateway, adminGateway, eventSink)', main)
 
 if __name__ == '__main__':
     unittest.main()
