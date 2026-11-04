@@ -78,7 +78,15 @@ createdAt: timestamp
 
 El administrador de esta Beta es de solo lectura desde la aplicación.
 
+## Verificación en Android Studio
+
+- Seleccionar el Build Variant `demoDebug`.
+- Probar en Android moderno como entorno principal de la Beta.
+- Android 7 / API 24 permanece como referencia de compatibilidad antigua pendiente de estabilización.
+- Firebase Authentication gestiona las identidades y Cloud Firestore almacena `users/{uid}`, animales y casos.
+
 ## Comprobaciones mínimas
+
 
 - Ciudadano entra al portal ciudadano y conserva sus animales/reportes.
 - Veterinario entra al portal veterinario y solo consulta sus casos asignados.
