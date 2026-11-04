@@ -1,0 +1,67 @@
+# Changelog
+
+Todos los cambios relevantes del proyecto Bienestar Animal Zipaquirá se registran en este archivo.
+
+## [0.4.0-beta] - Pre-sustentación
+
+### Añadido
+- Inicio de sesión con lectura real de `users/{uid}`.
+- Validación de `status`, `roles` y `activeRole`.
+- Enrutamiento por rol para:
+  - `citizen`
+  - `veterinarian`
+  - `administrator`
+- Portal Veterinario.
+- Consulta de casos asignados mediante `assignedTo`.
+- Flujo veterinario:
+  - `assigned -> in_progress`
+  - `in_progress -> completed`
+- Portal Administrador de solo lectura.
+- Métricas reales de usuarios, animales y casos.
+- Listados institucionales acotados desde Firestore.
+- Firestore Rules por rol con denegación por defecto.
+- Limpieza de datos visibles y bloqueo de pantallas protegidas al cerrar sesión.
+- Pruebas de contrato para autenticación, roles, Firestore, Veterinario y Administrador.
+- Workflow de GitHub Actions para ejecutar la suite de pruebas de contrato en la rama Beta.
+
+### Cambiado
+- `versionCode` pasa de 3 a 4.
+- `versionName` pasa de `0.3.0` a `0.4.0-beta`.
+- El login deja de asumir que toda cuenta es ciudadana.
+- La documentación de Firebase incluye cuentas institucionales de prueba.
+
+### Eliminado
+- Botón y texto de “Confirmar en mapa”.
+- Promesa de integración de mapa dentro del flujo actual.
+
+### Se mantiene pendiente
+- Compatibilidad completa en Android antiguo.
+- Offline con Room/WorkManager.
+- Evidencias multimedia con Firebase Storage.
+- IA de priorización.
+- Notificaciones FCM.
+- Backend real de adopciones.
+- Roles Coordinador y Funcionario de campo.
+- Creación/gestión de cuentas institucionales desde la app.
+
+---
+
+## [0.3.0] - Alpha estable
+
+### Añadido
+- Registro ciudadano real con Firebase Authentication.
+- Perfil ciudadano en Firestore.
+- Inicio y cierre de sesión.
+- Registro y consulta de animales.
+- Ubicación rural manual.
+- Reportes de pérdida, hallazgo y presunto maltrato.
+- Consulta de reportes.
+- Identidad protegida en reportes de presunto maltrato.
+- WebView endurecida.
+- Firestore Rules iniciales para datos del ciudadano.
+- Catálogo de adopciones identificado explícitamente como Demo.
+
+### Estado
+Esta versión quedó preservada en:
+- rama `main`;
+- tag `alpha-v0.3.0`.
