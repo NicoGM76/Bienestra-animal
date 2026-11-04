@@ -10,6 +10,7 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 - **Cloud Firestore** para perfiles, animales y casos.
 - Variante de prueba: `demoDebug` con paquete `com.bienestaranimal.zipaquira.demo`.
 - `versionCode = 4` y `versionName = 0.4.0-beta`.
+- El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
 - La aplicación **no usa GPS**. La ubicación se registra manualmente mediante municipio, barrio/vereda/sector, finca/predio/dirección y punto de referencia.
 
 ## Funciones reales disponibles
