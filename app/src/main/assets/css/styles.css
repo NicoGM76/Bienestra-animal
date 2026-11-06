@@ -222,3 +222,35 @@ input:disabled {
   .metric-grid,
   .compact-metrics { grid-template-columns:1fr; }
 }
+
+
+/* Beta 0.4.2 admin case assignment */
+.admin-assignment-list {
+  display:grid;
+  gap:12px;
+  margin-bottom:8px;
+}
+.admin-assignment-card {
+  padding:14px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.admin-assignment-card strong,
+.admin-assignment-card span {
+  display:block;
+}
+.admin-assignment-card strong {
+  color:var(--primary);
+  margin-bottom:5px;
+}
+.admin-assignment-card span {
+  color:var(--muted);
+  line-height:1.35;
+  margin-bottom:10px;
+}
+.admin-assignment-card select {
+  width:100%;
+  margin:4px 0 10px;
+}
