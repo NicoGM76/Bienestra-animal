@@ -1,4 +1,4 @@
-# Bienestar Animal Zipaquirá — Beta 0.4.1
+# Bienestar Animal Zipaquirá — Beta 0.4.2
 
 Aplicación Android híbrida para la gestión y bienestar animal del municipio de Zipaquirá, con enfoque prioritario en zonas rurales.
 
@@ -9,7 +9,7 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 - **Firebase Authentication** para identidad.
 - **Cloud Firestore** para perfiles, animales y casos.
 - Variante de prueba: `demoDebug` con paquete `com.bienestaranimal.zipaquira.demo`.
-- `versionCode = 5` y `versionName = 0.4.1-beta`.
+- `versionCode = 6` y `versionName = 0.4.2-beta`.
 - El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
 - La aplicación **no usa GPS**. La ubicación se registra manualmente mediante municipio, barrio/vereda/sector, finca/predio/dirección y punto de referencia.
 
@@ -42,13 +42,15 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 
 ### Administrador
 - Inicio de sesión con cuenta institucional.
-- Portal propio de solo lectura.
+- Portal propio de supervisión.
 - Conteo real de usuarios, animales y casos.
 - Indicadores de cuentas por rol: ciudadanos, veterinarios y administradores.
 - Seguimiento de casos por estado: recibidos, asignados, en atención y finalizados.
+- Asignación de casos en estado `received` a veterinarios activos desde la app.
+- La asignación registra profesional, rol, administrador responsable, fecha y cambia el caso a `assigned`.
 - Actividad institucional con cuentas, animales y casos recientes.
 - Identificación del profesional asignado a cada caso cuando existe.
-- Vista de solo lectura: no modifica registros desde la aplicación.
+- El resto de la información institucional permanece en modo de consulta.
 
 ## Seguridad de roles
 
@@ -61,7 +63,7 @@ El rol no lo decide JavaScript. Después de autenticar, Kotlin consulta `users/{
 Firestore Rules aplica los permisos reales:
 - ciudadano: sus animales y sus casos;
 - veterinario: únicamente casos cuyo `assignedTo` sea su UID;
-- administrador: lectura institucional;
+- administrador: lectura institucional y asignación acotada de casos recibidos a veterinarios activos;
 - eliminación bloqueada;
 - edición de roles desde el cliente bloqueada.
 
