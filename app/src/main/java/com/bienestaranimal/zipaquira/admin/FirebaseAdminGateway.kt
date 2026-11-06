@@ -2,6 +2,7 @@ package com.bienestaranimal.zipaquira.admin
 
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
 class FirebaseAdminGateway(
@@ -93,6 +94,7 @@ class FirebaseAdminGateway(
                                             finalPriority = document.getString("finalPriority") ?: "pending_review",
                                             neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
                                             animalCondition = document.getString("animalCondition").orEmpty(),
+                                            assignedToUid = assignedTo,
                                             assignedToName = if (assignedTo.isBlank()) {
                                                 "Sin asignar"
                                             } else {
@@ -126,6 +128,80 @@ class FirebaseAdminGateway(
             }
             .addOnFailureListener { callback(AdminOutcome.Error(userMessageFor(it))) }
     }
+
+    override fun assignCase(caseId: String, veterinarianUid: String, callback: (AdminOutcome) -> Unit) {
+        val adminUid = auth.currentUser?.uid
+        if (adminUid == null) {
+            callback(AdminOutcome.Error("Debes iniciar sesión como administrador para asignar casos."))
+            return
+        }
+
+        if (caseId.isBlank() || veterinarianUid.isBlank()) {
+            callback(AdminOutcome.Error("Selecciona un caso y un veterinario válido."))
+            return
+        }
+
+        val caseRef = firestore.collection("cases").document(caseId)
+        val veterinarianRef = firestore.collection("users").document(veterinarianUid)
+
+        firestore.runTransaction { transaction ->
+            val caseSnapshot = transaction.get(caseRef)
+            val veterinarianSnapshot = transaction.get(veterinarianRef)
+
+            if (!caseSnapshot.exists()) {
+                throw IllegalStateException("El caso ya no existe.")
+            }
+
+            val veterinarianRoles = (veterinarianSnapshot.get("roles") as? List<*>)
+                ?.mapNotNull { it as? String }
+                .orEmpty()
+            val isActiveVeterinarian = veterinarianSnapshot.exists()
+                && veterinarianSnapshot.getString("status") == "active"
+                && veterinarianSnapshot.getString("activeRole") == "veterinarian"
+                && veterinarianRoles.contains("veterinarian")
+
+            if (!isActiveVeterinarian) {
+                throw IllegalStateException("La cuenta seleccionada no es un veterinario activo.")
+            }
+
+            val currentStatus = caseSnapshot.getString("status") ?: "received"
+            if (currentStatus != "received") {
+                throw IllegalStateException("Solo se pueden asignar casos que estén en estado recibido.")
+            }
+
+            transaction.update(
+                caseRef,
+                mapOf(
+                    "assignedTo" to veterinarianUid,
+                    "assignedRole" to "veterinarian",
+                    "assignedBy" to adminUid,
+                    "assignedAt" to FieldValue.serverTimestamp(),
+                    "status" to "assigned",
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+
+            veterinarianSnapshot.getString("name").orEmpty().ifBlank { "Veterinario" }
+        }
+            .addOnSuccessListener { veterinarianName ->
+                callback(
+                    AdminOutcome.Assigned(
+                        caseId = caseId,
+                        veterinarianUid = veterinarianUid,
+                        veterinarianName = veterinarianName,
+                    )
+                )
+            }
+            .addOnFailureListener { error ->
+                val message = if (error is IllegalStateException) {
+                    error.message ?: "No fue posible asignar el caso."
+                } else {
+                    userMessageFor(error)
+                }
+                callback(AdminOutcome.Error(message))
+            }
+    }
+
 
     private fun userMessageFor(error: Exception): String = when (error) {
         is FirebaseNetworkException -> "No hay conexión con el servicio. Revisa tu Internet."
