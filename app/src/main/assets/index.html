@@ -134,7 +134,15 @@
           <div><h1>Portal veterinario</h1><p class="lead compact" id="vetSignedInUser">Sesión institucional.</p></div>
           <div class="avatar">VT</div>
         </div>
-        <div class="info-box"><span>ⓘ</span><p>Este portal muestra únicamente los casos asignados a la cuenta veterinaria autenticada.</p></div>
+        <div class="info-box"><span>ⓘ</span><p>Consulta tus casos asignados, controla su avance y registra la atención clínica cuando el caso esté en curso.</p></div>
+
+        <h2>MI CARGA DE ATENCIÓN</h2>
+        <div id="vetMetrics" class="metric-grid compact-metrics" aria-live="polite">
+          <div class="metric-card"><strong>—</strong><span>Asignados</span></div>
+          <div class="metric-card"><strong>—</strong><span>En atención</span></div>
+          <div class="metric-card"><strong>—</strong><span>Finalizados</span></div>
+        </div>
+
         <h2>CASOS ASIGNADOS</h2>
         <div id="vetCaseList" aria-live="polite">
           <div class="empty-state">
@@ -146,6 +154,39 @@
       </div>
     </section>
 
+    <section class="screen" data-screen="vet-care" aria-label="Atención veterinaria">
+      <div class="step-header"><button data-go="vet-home">←</button><strong>Atención veterinaria</strong><span>Ficha clínica</span></div>
+      <div class="page-content roomy">
+        <div class="demo-badge">REGISTRO INSTITUCIONAL · FIRESTORE</div>
+        <h1 id="vetCareTitle">Caso veterinario</h1>
+        <p class="lead" id="vetCareSummary">Selecciona un caso desde el portal veterinario.</p>
+
+        <div class="care-context-card">
+          <div><span>Estado</span><strong id="vetCareStatus">—</strong></div>
+          <div><span>Condición</span><strong id="vetCareCondition">—</strong></div>
+          <div><span>Ubicación</span><strong id="vetCareLocation">—</strong></div>
+        </div>
+
+        <div class="info-box"><span>🩺</span><p id="vetCareDescription">La descripción reportada aparecerá aquí. Esta vista no expone la identidad protegida del ciudadano.</p></div>
+
+        <label for="vetDiagnosis">Diagnóstico o impresión clínica</label>
+        <textarea id="vetDiagnosis" rows="3" placeholder="Ej. Herida superficial con signos de inflamación"></textarea>
+
+        <label for="vetObservations">Observaciones del examen</label>
+        <textarea id="vetObservations" rows="4" placeholder="Hallazgos relevantes, condición general, comportamiento..."></textarea>
+
+        <label for="vetTreatment">Tratamiento / conducta indicada</label>
+        <textarea id="vetTreatment" rows="4" placeholder="Procedimiento realizado o tratamiento indicado"></textarea>
+
+        <label for="vetRecommendations">Recomendaciones y seguimiento</label>
+        <textarea id="vetRecommendations" rows="3" placeholder="Cuidados, control o seguimiento recomendado"></textarea>
+
+        <p id="vetCareMessage" class="form-message" role="status" aria-live="polite"></p>
+        <button id="saveVetCareButton" class="btn primary block">Guardar ficha de atención</button>
+        <button class="btn ghost block" data-go="vet-home">Volver a casos</button>
+      </div>
+    </section>
+
     <section class="screen" data-screen="admin-home" aria-label="Portal administrador">
       <div class="online-banner">☁ <span>En línea · Acceso administrador</span></div>
       <div class="page-content roomy">
@@ -153,17 +194,37 @@
           <div><h1>Portal administrador</h1><p class="lead compact" id="adminSignedInUser">Sesión institucional.</p></div>
           <div class="avatar">AD</div>
         </div>
-        <div class="info-box"><span>🔒</span><p>Vista institucional de solo lectura para esta Beta.</p></div>
-        <h2>RESUMEN</h2>
+        <div class="info-box"><span>🔒</span><p>Panel institucional de consulta. En esta Beta el administrador supervisa información, pero no modifica registros desde la app.</p></div>
+
+        <h2>RESUMEN GENERAL</h2>
         <div id="adminMetrics" class="metric-grid" aria-live="polite">
           <div class="metric-card"><strong>—</strong><span>Usuarios</span></div>
           <div class="metric-card"><strong>—</strong><span>Animales</span></div>
           <div class="metric-card"><strong>—</strong><span>Casos</span></div>
+          <div class="metric-card"><strong>—</strong><span>Casos en atención</span></div>
         </div>
-        <h2>ACTIVIDAD RECIENTE</h2>
-        <div id="adminRecentList" class="empty-state">
-          <strong>Cargando información institucional…</strong>
-          <span>Los datos se consultarán desde Firestore.</span>
+
+        <h2>CUENTAS POR ROL</h2>
+        <div id="adminRoleMetrics" class="metric-grid compact-metrics" aria-live="polite">
+          <div class="metric-card"><strong>—</strong><span>Ciudadanos</span></div>
+          <div class="metric-card"><strong>—</strong><span>Veterinarios</span></div>
+          <div class="metric-card"><strong>—</strong><span>Administradores</span></div>
+        </div>
+
+        <h2>SEGUIMIENTO DE CASOS</h2>
+        <div id="adminCaseMetrics" class="metric-grid compact-metrics" aria-live="polite">
+          <div class="metric-card"><strong>—</strong><span>Recibidos</span></div>
+          <div class="metric-card"><strong>—</strong><span>Asignados</span></div>
+          <div class="metric-card"><strong>—</strong><span>En atención</span></div>
+          <div class="metric-card"><strong>—</strong><span>Finalizados</span></div>
+        </div>
+
+        <h2>ACTIVIDAD INSTITUCIONAL</h2>
+        <div id="adminRecentList" class="admin-activity" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando información institucional…</strong>
+            <span>Los datos se consultarán desde Firestore.</span>
+          </div>
         </div>
         <button id="adminLogoutButton" class="btn ghost block">Cerrar sesión</button>
       </div>
