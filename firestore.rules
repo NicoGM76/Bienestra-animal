@@ -111,9 +111,32 @@ service cloud.firestore {
       allow update: if isVeterinarian()
                     && resource.data.assignedTo == request.auth.uid
                     && request.resource.data.assignedTo == request.auth.uid
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
-                    && veterinarianStatusTransitionAllowed()
-                    && request.resource.data.updatedAt == request.time;
+                    && (
+                      (
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+                        && veterinarianStatusTransitionAllowed()
+                        && request.resource.data.updatedAt == request.time
+                      )
+                      ||
+                      (
+                        resource.data.status == "in_progress"
+                        && request.resource.data.status == resource.data.status
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          "veterinaryDiagnosis",
+                          "veterinaryObservations",
+                          "veterinaryTreatment",
+                          "veterinaryRecommendations",
+                          "veterinaryUpdatedBy",
+                          "veterinaryUpdatedAt",
+                          "updatedAt"
+                        ])
+                        && request.resource.data.veterinaryDiagnosis is string
+                        && request.resource.data.veterinaryTreatment is string
+                        && request.resource.data.veterinaryUpdatedBy == request.auth.uid
+                        && request.resource.data.veterinaryUpdatedAt == request.time
+                        && request.resource.data.updatedAt == request.time
+                      )
+                    );
 
       allow delete: if false;
     }
