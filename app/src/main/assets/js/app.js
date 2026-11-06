@@ -8,6 +8,7 @@
     report: 'citizen',
     adoptions: 'citizen',
     'vet-home': 'veterinarian',
+    'vet-care': 'veterinarian',
     'admin-home': 'administrator'
   };
 
@@ -42,7 +43,22 @@
   const vetLogoutButton = document.getElementById('vetLogoutButton');
   const adminLogoutButton = document.getElementById('adminLogoutButton');
   const vetCaseList = document.getElementById('vetCaseList');
+  const vetMetrics = document.getElementById('vetMetrics');
+  const vetCareTitle = document.getElementById('vetCareTitle');
+  const vetCareSummary = document.getElementById('vetCareSummary');
+  const vetCareStatus = document.getElementById('vetCareStatus');
+  const vetCareCondition = document.getElementById('vetCareCondition');
+  const vetCareLocation = document.getElementById('vetCareLocation');
+  const vetCareDescription = document.getElementById('vetCareDescription');
+  const vetDiagnosis = document.getElementById('vetDiagnosis');
+  const vetObservations = document.getElementById('vetObservations');
+  const vetTreatment = document.getElementById('vetTreatment');
+  const vetRecommendations = document.getElementById('vetRecommendations');
+  const vetCareMessage = document.getElementById('vetCareMessage');
+  const saveVetCareButton = document.getElementById('saveVetCareButton');
   const adminMetrics = document.getElementById('adminMetrics');
+  const adminRoleMetrics = document.getElementById('adminRoleMetrics');
+  const adminCaseMetrics = document.getElementById('adminCaseMetrics');
   const adminRecentList = document.getElementById('adminRecentList');
   const reportTitle = document.getElementById('reportTitle');
   const reportHeader = document.getElementById('reportHeader');
@@ -50,6 +66,8 @@
   const protectedIdentityNotice = document.getElementById('protectedIdentityNotice');
   let lastAuthAction = 'login';
   let currentReportType = 'lost';
+  let currentVetCases = [];
+  let currentVetCaseId = '';
 
   const clearNode = (node) => {
     if (!node) return;
@@ -58,16 +76,28 @@
 
   const clearSessionData = () => {
     currentRole = '';
+    currentVetCases = [];
+    currentVetCaseId = '';
     clearNode(animalList);
     clearNode(caseList);
     clearNode(vetCaseList);
     clearNode(adminRecentList);
 
-    if (adminMetrics) {
-      adminMetrics.querySelectorAll('.metric-card strong').forEach(value => {
+    [vetMetrics, adminMetrics, adminRoleMetrics, adminCaseMetrics].forEach(container => {
+      if (!container) return;
+      container.querySelectorAll('.metric-card strong').forEach(value => {
         value.textContent = '—';
       });
-    }
+    });
+
+    [vetDiagnosis, vetObservations, vetTreatment, vetRecommendations].forEach(field => {
+      if (field) {
+        field.value = '';
+        field.disabled = false;
+      }
+    });
+    if (saveVetCareButton) saveVetCareButton.disabled = false;
+    if (vetCareMessage) vetCareMessage.textContent = '';
 
     ['signedInUser', 'vetSignedInUser', 'adminSignedInUser'].forEach(id => {
       const label = document.getElementById(id);
@@ -231,11 +261,25 @@
   };
 
 
+  const renderVeterinarianMetrics = (cases) => {
+    if (!vetMetrics) return;
+    const values = vetMetrics.querySelectorAll('.metric-card strong');
+    const list = Array.isArray(cases) ? cases : [];
+    const assigned = list.filter(item => item.status === 'assigned').length;
+    const inProgress = list.filter(item => item.status === 'in_progress').length;
+    const completed = list.filter(item => item.status === 'completed').length;
+    if (values[0]) values[0].textContent = String(assigned);
+    if (values[1]) values[1].textContent = String(inProgress);
+    if (values[2]) values[2].textContent = String(completed);
+  };
+
   const renderVeterinarianCases = (cases) => {
     if (!vetCaseList) return;
+    currentVetCases = Array.isArray(cases) ? cases : [];
+    renderVeterinarianMetrics(currentVetCases);
     while (vetCaseList.firstChild) vetCaseList.removeChild(vetCaseList.firstChild);
 
-    if (!Array.isArray(cases) || cases.length === 0) {
+    if (currentVetCases.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       const title = document.createElement('strong');
@@ -249,7 +293,7 @@
 
     const grid = document.createElement('div');
     grid.className = 'case-grid';
-    cases.forEach(item => {
+    currentVetCases.forEach(item => {
       const card = document.createElement('article');
       card.className = 'case-card';
 
@@ -271,7 +315,19 @@
       const status = document.createElement('b');
       status.textContent = `Estado: ${statusLabel(item.status)}`;
 
-      card.append(top, location, condition, status);
+      const summary = document.createElement('span');
+      const rawDescription = item.description || '';
+      summary.textContent = rawDescription
+        ? (rawDescription.length > 115 ? rawDescription.slice(0, 112) + '…' : rawDescription)
+        : 'Sin descripción adicional.';
+
+      card.append(top, location, condition, status, summary);
+
+      const detailAction = document.createElement('button');
+      detailAction.className = 'btn ghost block';
+      detailAction.dataset.vetOpenCaseId = item.id;
+      detailAction.textContent = item.status === 'completed' ? 'Ver ficha clínica' : 'Abrir ficha de atención';
+      card.appendChild(detailAction);
 
       const nextStatus = item.status === 'assigned'
         ? 'in_progress'
@@ -292,6 +348,49 @@
     vetCaseList.appendChild(grid);
   };
 
+  const openVeterinarianCase = (caseId) => {
+    const item = currentVetCases.find(candidate => candidate.id === caseId);
+    if (!item) {
+      toast('No fue posible abrir el caso seleccionado.');
+      return;
+    }
+
+    currentVetCaseId = item.id;
+    if (vetCareTitle) vetCareTitle.textContent = typeLabel(item.type);
+    if (vetCareSummary) vetCareSummary.textContent = `Caso ${item.id.slice(0, 8)} · ${item.animalCount || 1} animal(es)`;
+    if (vetCareStatus) vetCareStatus.textContent = statusLabel(item.status);
+    if (vetCareCondition) vetCareCondition.textContent = item.animalCondition || 'No registrada';
+    if (vetCareLocation) {
+      vetCareLocation.textContent = [item.neighborhoodOrVillage, item.addressOrLocation, item.referencePoint]
+        .filter(Boolean)
+        .join(' · ') || 'Zipaquirá';
+    }
+    if (vetCareDescription) vetCareDescription.textContent = item.description || 'Sin descripción adicional.';
+
+    if (vetDiagnosis) vetDiagnosis.value = item.veterinaryDiagnosis || '';
+    if (vetObservations) vetObservations.value = item.veterinaryObservations || '';
+    if (vetTreatment) vetTreatment.value = item.veterinaryTreatment || '';
+    if (vetRecommendations) vetRecommendations.value = item.veterinaryRecommendations || '';
+
+    const editable = item.status === 'in_progress';
+    [vetDiagnosis, vetObservations, vetTreatment, vetRecommendations].forEach(field => {
+      if (field) field.disabled = !editable;
+    });
+    if (saveVetCareButton) saveVetCareButton.disabled = !editable;
+
+    if (editable) {
+      setMessage(vetCareMessage, 'Ficha habilitada para registrar o actualizar la atención.');
+    } else if (item.status === 'assigned') {
+      setMessage(vetCareMessage, 'Primero inicia la atención desde el portal veterinario.', 'error');
+    } else if (item.status === 'completed') {
+      setMessage(vetCareMessage, 'Caso finalizado. La ficha se muestra en modo de consulta.', 'success');
+    } else {
+      setMessage(vetCareMessage, 'La ficha no está habilitada para este estado.');
+    }
+
+    go('vet-care');
+  };
+
 
   const renderAdminDashboard = (data) => {
     if (adminMetrics) {
@@ -299,34 +398,80 @@
       if (cards[0]) cards[0].textContent = String(data.userCount || 0);
       if (cards[1]) cards[1].textContent = String(data.animalCount || 0);
       if (cards[2]) cards[2].textContent = String(data.caseCount || 0);
+      if (cards[3]) cards[3].textContent = String(data.activeCaseCount || 0);
+    }
+
+    if (adminRoleMetrics) {
+      const cards = adminRoleMetrics.querySelectorAll('.metric-card strong');
+      if (cards[0]) cards[0].textContent = String(data.citizenCount || 0);
+      if (cards[1]) cards[1].textContent = String(data.veterinarianCount || 0);
+      if (cards[2]) cards[2].textContent = String(data.administratorCount || 0);
+    }
+
+    if (adminCaseMetrics) {
+      const cards = adminCaseMetrics.querySelectorAll('.metric-card strong');
+      if (cards[0]) cards[0].textContent = String(data.receivedCaseCount || 0);
+      if (cards[1]) cards[1].textContent = String(data.assignedCaseCount || 0);
+      if (cards[2]) cards[2].textContent = String(data.inProgressCaseCount || 0);
+      if (cards[3]) cards[3].textContent = String(data.completedCaseCount || 0);
     }
 
     if (!adminRecentList) return;
     while (adminRecentList.firstChild) adminRecentList.removeChild(adminRecentList.firstChild);
 
+    const roleLabel = role => {
+      if (role === 'administrator') return 'Administrador';
+      if (role === 'veterinarian') return 'Veterinario';
+      if (role === 'citizen') return 'Ciudadano';
+      return role || 'Sin rol';
+    };
+
     const sections = [
-      { title: 'Usuarios', items: data.users || [], describe: item => [item.name, item.activeRole, item.status].filter(Boolean).join(' · ') },
-      { title: 'Animales', items: data.animals || [], describe: item => [item.name, item.species, item.status].filter(Boolean).join(' · ') },
-      { title: 'Casos', items: data.cases || [], describe: item => [typeLabel(item.type), statusLabel(item.status), item.neighborhoodOrVillage].filter(Boolean).join(' · ') }
+      {
+        title: 'Cuentas recientes',
+        items: data.users || [],
+        describe: item => [item.name || item.email, roleLabel(item.activeRole), item.status === 'active' ? 'Activa' : item.status].filter(Boolean).join(' · ')
+      },
+      {
+        title: 'Animales registrados',
+        items: data.animals || [],
+        describe: item => [item.name, item.species, item.status === 'active' ? 'Activo' : item.status].filter(Boolean).join(' · ')
+      },
+      {
+        title: 'Casos recientes',
+        items: data.cases || [],
+        describe: item => [
+          typeLabel(item.type),
+          statusLabel(item.status),
+          item.neighborhoodOrVillage,
+          item.animalCondition,
+          item.assignedToName
+        ].filter(Boolean).join(' · ')
+      }
     ];
 
     sections.forEach(section => {
+      const group = document.createElement('div');
+      group.className = 'admin-section';
       const heading = document.createElement('strong');
+      heading.className = 'admin-section-title';
       heading.textContent = section.title;
-      adminRecentList.appendChild(heading);
+      group.appendChild(heading);
 
       if (!section.items.length) {
         const empty = document.createElement('span');
         empty.textContent = 'Sin registros para mostrar.';
-        adminRecentList.appendChild(empty);
-        return;
+        group.appendChild(empty);
+      } else {
+        section.items.forEach(item => {
+          const row = document.createElement('span');
+          row.className = 'admin-row';
+          row.textContent = section.describe(item);
+          group.appendChild(row);
+        });
       }
 
-      section.items.forEach(item => {
-        const row = document.createElement('span');
-        row.textContent = section.describe(item);
-        adminRecentList.appendChild(row);
-      });
+      adminRecentList.appendChild(group);
     });
   };
 
@@ -504,7 +649,15 @@
         return;
       }
 
+      if (eventName === 'vet:care-saved') {
+        setMessage(vetCareMessage, 'Ficha de atención guardada correctamente.', 'success');
+        toast('Ficha veterinaria guardada.');
+        requestVeterinarianCases();
+        return;
+      }
+
       if (eventName === 'vet:error') {
+        setMessage(vetCareMessage, data.message || 'No fue posible completar la operación veterinaria.', 'error');
         toast(data.message || 'No fue posible completar la operación veterinaria.');
         return;
       }
@@ -536,13 +689,47 @@
       return;
     }
 
+    const vetOpen = event.target.closest('[data-vet-open-case-id]');
+    if (vetOpen) {
+      event.preventDefault();
+      openVeterinarianCase(vetOpen.dataset.vetOpenCaseId);
+      return;
+    }
+
     const vetAction = event.target.closest('[data-vet-case-id]');
     if (vetAction) {
       event.preventDefault();
       if (window.Android && typeof window.Android.updateAssignedCaseStatus === 'function') {
         Android.updateAssignedCaseStatus(vetAction.dataset.vetCaseId, vetAction.dataset.vetNextStatus);
       }
+      return;
     }
+  });
+
+  if (saveVetCareButton) saveVetCareButton.addEventListener('click', () => {
+    setMessage(vetCareMessage, '');
+    if (!currentVetCaseId) {
+      setMessage(vetCareMessage, 'Selecciona un caso antes de guardar.', 'error');
+      return;
+    }
+    if (!window.Android || typeof window.Android.saveVeterinaryCare !== 'function') {
+      setMessage(vetCareMessage, 'El registro clínico requiere ejecutar la app Android.', 'error');
+      return;
+    }
+
+    const diagnosis = vetDiagnosis ? vetDiagnosis.value.trim() : '';
+    const observations = vetObservations ? vetObservations.value.trim() : '';
+    const treatment = vetTreatment ? vetTreatment.value.trim() : '';
+    const recommendations = vetRecommendations ? vetRecommendations.value.trim() : '';
+
+    if (diagnosis.length < 3 || treatment.length < 3) {
+      setMessage(vetCareMessage, 'Completa al menos diagnóstico y tratamiento.', 'error');
+      return;
+    }
+
+    saveVetCareButton.disabled = true;
+    setMessage(vetCareMessage, 'Guardando ficha clínica…');
+    Android.saveVeterinaryCare(currentVetCaseId, diagnosis, observations, treatment, recommendations);
   });
 
   if (loginButton) loginButton.addEventListener('click', () => {
