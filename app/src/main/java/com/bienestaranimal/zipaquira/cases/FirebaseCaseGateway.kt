@@ -70,7 +70,13 @@ class FirebaseCaseGateway(
             .whereEqualTo("createdBy", user.uid)
             .get()
             .addOnSuccessListener { snapshot ->
-                callback(CaseOutcome.Listed(snapshot.documents.map(::toSummary).sortedBy { it.type + it.neighborhoodOrVillage }))
+                callback(
+                    CaseOutcome.Listed(
+                        snapshot.documents
+                            .map(::toSummary)
+                            .sortedBy { it.type + it.neighborhoodOrVillage }
+                    )
+                )
             }
             .addOnFailureListener { error -> callback(CaseOutcome.Error(userMessageFor(error))) }
     }
@@ -142,12 +148,76 @@ class FirebaseCaseGateway(
         }.addOnSuccessListener {
             callback(CaseOutcome.Updated(normalizedId, normalizedStatus))
         }.addOnFailureListener { error ->
-            val message = if (error is IllegalStateException) {
-                error.message ?: "No fue posible actualizar el caso."
-            } else {
-                userMessageFor(error)
+            callback(CaseOutcome.Error(transactionMessageFor(error, "No fue posible actualizar el caso.")))
+        }
+    }
+
+    override fun saveVeterinaryCare(
+        caseId: String,
+        diagnosis: String,
+        observations: String,
+        treatment: String,
+        recommendations: String,
+        callback: (CaseOutcome) -> Unit,
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(CaseOutcome.Error("Debes iniciar sesión para registrar la atención."))
+            return
+        }
+
+        val normalizedId = caseId.trim()
+        val normalizedDiagnosis = diagnosis.trim()
+        val normalizedObservations = observations.trim()
+        val normalizedTreatment = treatment.trim()
+        val normalizedRecommendations = recommendations.trim()
+
+        if (normalizedId.isBlank()) {
+            callback(CaseOutcome.Error("El caso no es válido."))
+            return
+        }
+
+        if (normalizedDiagnosis.length < 3) {
+            callback(CaseOutcome.Error("Registra un diagnóstico o impresión clínica."))
+            return
+        }
+
+        if (normalizedTreatment.length < 3) {
+            callback(CaseOutcome.Error("Registra el tratamiento o conducta indicada."))
+            return
+        }
+
+        val document = firestore.collection("cases").document(normalizedId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(document)
+            if (!snapshot.exists()) {
+                throw IllegalStateException("El caso no existe.")
             }
-            callback(CaseOutcome.Error(message))
+
+            if (snapshot.getString("assignedTo").orEmpty() != user.uid) {
+                throw IllegalStateException("Este caso no está asignado a tu cuenta.")
+            }
+
+            if (snapshot.getString("status").orEmpty() != "in_progress") {
+                throw IllegalStateException("Inicia la atención antes de registrar la ficha clínica.")
+            }
+
+            transaction.update(
+                document,
+                mapOf(
+                    "veterinaryDiagnosis" to normalizedDiagnosis,
+                    "veterinaryObservations" to normalizedObservations,
+                    "veterinaryTreatment" to normalizedTreatment,
+                    "veterinaryRecommendations" to normalizedRecommendations,
+                    "veterinaryUpdatedBy" to user.uid,
+                    "veterinaryUpdatedAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+        }.addOnSuccessListener {
+            callback(CaseOutcome.CareSaved(normalizedId))
+        }.addOnFailureListener { error ->
+            callback(CaseOutcome.Error(transactionMessageFor(error, "No fue posible guardar la atención veterinaria.")))
         }
     }
 
@@ -157,14 +227,28 @@ class FirebaseCaseGateway(
             type = document.getString("type").orEmpty(),
             status = document.getString("status") ?: "received",
             finalPriority = document.getString("finalPriority") ?: "pending_review",
+            description = document.getString("description").orEmpty(),
+            animalCount = (document.getLong("animalCount") ?: 1L).toInt(),
             neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
             addressOrLocation = document.getString("addressOrLocation").orEmpty(),
             referencePoint = document.getString("referencePoint").orEmpty(),
             animalCondition = document.getString("animalCondition").orEmpty(),
+            veterinaryDiagnosis = document.getString("veterinaryDiagnosis").orEmpty(),
+            veterinaryObservations = document.getString("veterinaryObservations").orEmpty(),
+            veterinaryTreatment = document.getString("veterinaryTreatment").orEmpty(),
+            veterinaryRecommendations = document.getString("veterinaryRecommendations").orEmpty(),
         )
 
-    private fun userMessageFor(error: Exception): String = when (error) {
-        is FirebaseNetworkException -> "No hay conexión con el servicio. Revisa tu Internet."
-        else -> "No fue posible completar la operación con el reporte. Intenta de nuevo."
-    }
+    private fun transactionMessageFor(error: Exception, fallback: String): String =
+        if (error is IllegalStateException) {
+            error.message ?: fallback
+        } else {
+            userMessageFor(error, fallback)
+        }
+
+    private fun userMessageFor(error: Exception, fallback: String = "No fue posible completar la operación con el reporte. Intenta de nuevo."): String =
+        when (error) {
+            is FirebaseNetworkException -> "No hay conexión con el servicio. Revisa tu Internet."
+            else -> fallback
+        }
 }
