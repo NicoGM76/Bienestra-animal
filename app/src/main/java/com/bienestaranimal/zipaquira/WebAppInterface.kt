@@ -191,6 +191,7 @@ class WebAppInterface(
                 is CaseOutcome.Error -> emitCaseError(outcome.message)
                 is CaseOutcome.Listed -> emitCaseList(outcome)
                 is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
             }
         }
     }
@@ -204,6 +205,7 @@ class WebAppInterface(
                 is CaseOutcome.Error -> emitCaseError(outcome.message)
                 is CaseOutcome.Saved -> Unit
                 is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
             }
         }
     }
@@ -217,6 +219,7 @@ class WebAppInterface(
                 is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
                 is CaseOutcome.Saved -> Unit
                 is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
             }
         }
     }
@@ -235,6 +238,36 @@ class WebAppInterface(
                 )
                 is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
                 is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Listed -> Unit
+                is CaseOutcome.CareSaved -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun saveVeterinaryCare(
+        caseId: String,
+        diagnosis: String,
+        observations: String,
+        treatment: String,
+        recommendations: String,
+    ) {
+        eventSink.emit("vet:loading", JSONObject().put("action", "care").toString())
+        caseGateway.saveVeterinaryCare(
+            caseId = caseId,
+            diagnosis = diagnosis,
+            observations = observations,
+            treatment = treatment,
+            recommendations = recommendations,
+        ) { outcome ->
+            when (outcome) {
+                is CaseOutcome.CareSaved -> eventSink.emit(
+                    "vet:care-saved",
+                    JSONObject().put("caseId", outcome.caseId).toString(),
+                )
+                is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
+                is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Updated -> Unit
                 is CaseOutcome.Listed -> Unit
             }
         }
@@ -294,7 +327,9 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
-                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage),
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("animalCondition", item.animalCondition)
+                    .put("assignedToName", item.assignedToName),
             )
         }
         eventSink.emit("cases:list", JSONObject().put("cases", cases).toString())
@@ -342,6 +377,14 @@ class WebAppInterface(
                 .put("userCount", outcome.userCount)
                 .put("animalCount", outcome.animalCount)
                 .put("caseCount", outcome.caseCount)
+                .put("activeCaseCount", outcome.activeCaseCount)
+                .put("citizenCount", outcome.citizenCount)
+                .put("veterinarianCount", outcome.veterinarianCount)
+                .put("administratorCount", outcome.administratorCount)
+                .put("receivedCaseCount", outcome.receivedCaseCount)
+                .put("assignedCaseCount", outcome.assignedCaseCount)
+                .put("inProgressCaseCount", outcome.inProgressCaseCount)
+                .put("completedCaseCount", outcome.completedCaseCount)
                 .put("users", users)
                 .put("animals", animals)
                 .put("cases", cases)
@@ -358,10 +401,16 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
+                    .put("description", item.description)
+                    .put("animalCount", item.animalCount)
                     .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
                     .put("addressOrLocation", item.addressOrLocation)
                     .put("referencePoint", item.referencePoint)
-                    .put("animalCondition", item.animalCondition),
+                    .put("animalCondition", item.animalCondition)
+                    .put("veterinaryDiagnosis", item.veterinaryDiagnosis)
+                    .put("veterinaryObservations", item.veterinaryObservations)
+                    .put("veterinaryTreatment", item.veterinaryTreatment)
+                    .put("veterinaryRecommendations", item.veterinaryRecommendations),
             )
         }
         eventSink.emit("vet:cases", JSONObject().put("cases", cases).toString())
