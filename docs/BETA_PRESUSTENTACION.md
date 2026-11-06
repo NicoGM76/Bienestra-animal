@@ -1,4 +1,4 @@
-# Beta 0.4.1 — Guía de pre-sustentación
+# Beta 0.4.2 — Guía de pre-sustentación
 
 ## Qué demuestra esta Beta
 
@@ -54,16 +54,7 @@ status: "active"
 createdAt: timestamp
 ```
 
-Elegir un caso ciudadano ya existente y agregar:
-
-```text
-assignedTo: "<UID_VET>"
-assignedRole: "veterinarian"
-status: "assigned"
-updatedAt: timestamp
-```
-
-Conservar todos los demás campos del caso.
+No es necesario asignar el caso manualmente desde Firestore. La asignación se realiza desde el portal Administrador durante la demostración.
 
 ### 4. Administrador
 
@@ -96,11 +87,31 @@ No guardar contraseñas en GitHub ni en este documento.
 
 Resultado esperado: los datos Alpha siguen disponibles.
 
-### Prueba 2 — Veterinario
+### Prueba 2 — Administrador asigna el caso
+
+1. Iniciar sesión con la cuenta Administrador Demo.
+2. Confirmar que abre **Portal administrador**.
+3. Mostrar el resumen general, cuentas por rol y seguimiento de casos.
+4. Ir a **Asignación de casos**.
+5. Seleccionar un caso en estado **Recibido**.
+6. Seleccionar el Veterinario Demo.
+7. Pulsar **Asignar caso**.
+8. Confirmar que el caso desaparece de pendientes y pasa a **Asignado**.
+9. Si se desea mostrar evidencia técnica, confirmar en Firestore:
+   - `status = "assigned"`;
+   - `assignedTo = UID del veterinario`;
+   - `assignedRole = "veterinarian"`;
+   - `assignedBy = UID del administrador`;
+   - `assignedAt = timestamp`.
+10. Cerrar sesión.
+
+Resultado esperado: el administrador puede realizar únicamente la asignación operativa del caso, sin editar libremente sus datos.
+
+### Prueba 3 — Veterinario atiende el caso
 
 1. Iniciar sesión con la cuenta Veterinario Demo.
 2. Confirmar que abre **Portal veterinario**, no Portal ciudadano.
-3. Mostrar únicamente el caso asignado a ese UID.
+3. Mostrar únicamente el caso que acaba de asignar el Administrador.
 4. Mostrar el resumen de carga: asignados, en atención y finalizados.
 5. Pulsar **Iniciar atención**.
 6. Confirmar en Firestore: `status = "in_progress"`.
@@ -112,24 +123,7 @@ Resultado esperado: los datos Alpha siguen disponibles.
 12. Abrir nuevamente la ficha para mostrarla en modo consulta.
 13. Cerrar sesión.
 
-Resultado esperado: el veterinario solo trabaja sobre casos asignados a su cuenta y la ficha clínica solo se edita durante la atención en curso.
-
-### Prueba 3 — Administrador
-
-1. Iniciar sesión con la cuenta Administrador Demo.
-2. Confirmar que abre **Portal administrador**.
-3. Mostrar el resumen general:
-   - usuarios;
-   - animales;
-   - casos;
-   - casos en atención.
-4. Mostrar la distribución de cuentas por rol.
-5. Mostrar la distribución de casos por estado.
-6. Mostrar la actividad institucional reciente y el profesional asignado cuando exista.
-7. Aclarar que en esta Beta el panel es de solo lectura.
-8. Cerrar sesión.
-
-Resultado esperado: el administrador consulta información institucional y seguimiento operativo sin modificar datos.
+Resultado esperado: el flujo queda conectado de extremo a extremo: Ciudadano reporta -> Administrador asigna -> Veterinario atiende y finaliza.
 
 ---
 
@@ -142,7 +136,7 @@ Resultado esperado: el administrador consulta información institucional y segui
 - Veterinario puede modificar `status` y `updatedAt` únicamente en las dos transiciones habilitadas.
 - La ficha clínica solo puede guardarla el veterinario asignado cuando el caso está `in_progress`.
 - La escritura clínica se limita a diagnóstico, observaciones, tratamiento, recomendaciones y metadatos de auditoría.
-- Administrador tiene lectura institucional, no edición.
+- Administrador tiene lectura institucional y solo puede modificar los campos estrictamente necesarios para asignar un caso `received` a un veterinario activo.
 - La eliminación continúa bloqueada.
 - Al cerrar sesión se limpian los datos mostrados y la navegación protegida vuelve al login.
 
@@ -162,7 +156,8 @@ La configuración declara `minSdk 23`, pero la compatibilidad completa con dispo
 - [ ] Build Variant: `demoDebug`.
 - [ ] Reglas Beta publicadas en Firestore.
 - [ ] Cuenta Ciudadano probada.
-- [ ] Cuenta Veterinario creada y con un caso asignado.
+- [ ] Cuenta Veterinario creada y activa.
+- [ ] Asignación Admin `received -> assigned` probada desde la app.
 - [ ] Cuenta Administrador creada.
 - [ ] Login/logout probado en los tres roles.
 - [ ] Animal ciudadano visible.
