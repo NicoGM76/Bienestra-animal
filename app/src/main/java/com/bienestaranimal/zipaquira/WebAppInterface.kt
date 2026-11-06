@@ -279,10 +279,33 @@ class WebAppInterface(
         adminGateway.loadDashboard { outcome ->
             when (outcome) {
                 is AdminOutcome.Loaded -> emitAdminDashboard(outcome)
+                is AdminOutcome.Assigned -> Unit
                 is AdminOutcome.Error -> eventSink.emit(
                     "admin:error",
                     JSONObject().put("message", outcome.message).toString(),
                 )
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun assignCaseToVeterinarian(caseId: String, veterinarianUid: String) {
+        eventSink.emit("admin:loading", JSONObject().put("action", "assign").toString())
+        adminGateway.assignCase(caseId, veterinarianUid) { outcome ->
+            when (outcome) {
+                is AdminOutcome.Assigned -> eventSink.emit(
+                    "admin:case-assigned",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("veterinarianUid", outcome.veterinarianUid)
+                        .put("veterinarianName", outcome.veterinarianName)
+                        .toString(),
+                )
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is AdminOutcome.Loaded -> Unit
             }
         }
     }
@@ -367,6 +390,7 @@ class WebAppInterface(
                     .put("finalPriority", item.finalPriority)
                     .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
                     .put("animalCondition", item.animalCondition)
+                    .put("assignedToUid", item.assignedToUid)
                     .put("assignedToName", item.assignedToName),
             )
         }
