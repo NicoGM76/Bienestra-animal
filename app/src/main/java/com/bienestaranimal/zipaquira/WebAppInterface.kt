@@ -327,9 +327,7 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
-                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
-                    .put("animalCondition", item.animalCondition)
-                    .put("assignedToName", item.assignedToName),
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage),
             )
         }
         eventSink.emit("cases:list", JSONObject().put("cases", cases).toString())
@@ -367,7 +365,9 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
-                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage),
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("animalCondition", item.animalCondition)
+                    .put("assignedToName", item.assignedToName),
             )
         }
 
