@@ -1,4 +1,4 @@
-# Beta 0.4 — Guía de pre-sustentación
+# Beta 0.4.1 — Guía de pre-sustentación
 
 ## Qué demuestra esta Beta
 
@@ -101,27 +101,35 @@ Resultado esperado: los datos Alpha siguen disponibles.
 1. Iniciar sesión con la cuenta Veterinario Demo.
 2. Confirmar que abre **Portal veterinario**, no Portal ciudadano.
 3. Mostrar únicamente el caso asignado a ese UID.
-4. Pulsar **Iniciar atención**.
-5. Confirmar en Firestore: `status = "in_progress"`.
-6. Pulsar **Marcar como realizado**.
-7. Confirmar en Firestore: `status = "completed"`.
-8. Cerrar sesión.
+4. Mostrar el resumen de carga: asignados, en atención y finalizados.
+5. Pulsar **Iniciar atención**.
+6. Confirmar en Firestore: `status = "in_progress"`.
+7. Abrir **Ficha de atención**.
+8. Registrar diagnóstico, observaciones, tratamiento y recomendaciones.
+9. Guardar la ficha y confirmar que los campos veterinarios aparecen en el caso de Firestore.
+10. Volver al portal y pulsar **Marcar como realizado**.
+11. Confirmar en Firestore: `status = "completed"`.
+12. Abrir nuevamente la ficha para mostrarla en modo consulta.
+13. Cerrar sesión.
 
-Resultado esperado: el veterinario solo trabaja sobre casos asignados a su cuenta.
+Resultado esperado: el veterinario solo trabaja sobre casos asignados a su cuenta y la ficha clínica solo se edita durante la atención en curso.
 
 ### Prueba 3 — Administrador
 
 1. Iniciar sesión con la cuenta Administrador Demo.
 2. Confirmar que abre **Portal administrador**.
-3. Mostrar conteos reales:
+3. Mostrar el resumen general:
    - usuarios;
    - animales;
-   - casos.
-4. Mostrar las muestras de registros cargadas desde Firestore.
-5. Aclarar que en esta Beta el panel es de solo lectura.
-6. Cerrar sesión.
+   - casos;
+   - casos en atención.
+4. Mostrar la distribución de cuentas por rol.
+5. Mostrar la distribución de casos por estado.
+6. Mostrar la actividad institucional reciente y el profesional asignado cuando exista.
+7. Aclarar que en esta Beta el panel es de solo lectura.
+8. Cerrar sesión.
 
-Resultado esperado: el administrador consulta información institucional sin modificar datos.
+Resultado esperado: el administrador consulta información institucional y seguimiento operativo sin modificar datos.
 
 ---
 
@@ -131,7 +139,9 @@ Resultado esperado: el administrador consulta información institucional sin mod
 - `roles` y `activeRole` no se pueden editar desde el cliente.
 - Ocultar o mostrar una pantalla en JavaScript no concede acceso a Firestore.
 - Veterinario solo puede leer casos con `assignedTo == su UID`.
-- Veterinario únicamente puede modificar `status` y `updatedAt` en las dos transiciones habilitadas.
+- Veterinario puede modificar `status` y `updatedAt` únicamente en las dos transiciones habilitadas.
+- La ficha clínica solo puede guardarla el veterinario asignado cuando el caso está `in_progress`.
+- La escritura clínica se limita a diagnóstico, observaciones, tratamiento, recomendaciones y metadatos de auditoría.
 - Administrador tiene lectura institucional, no edición.
 - La eliminación continúa bloqueada.
 - Al cerrar sesión se limpian los datos mostrados y la navegación protegida vuelve al login.
@@ -158,5 +168,6 @@ La configuración declara `minSdk 23`, pero la compatibilidad completa con dispo
 - [ ] Animal ciudadano visible.
 - [ ] Reporte ciudadano visible.
 - [ ] Flujo veterinario `assigned -> in_progress -> completed` probado.
-- [ ] Dashboard Admin cargando datos reales.
+- [ ] Ficha clínica veterinaria guardada y recuperada desde Firestore.
+- [ ] Dashboard Admin mostrando roles y estados de casos con datos reales.
 - [ ] APK Beta generado después de las pruebas.
