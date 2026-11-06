@@ -650,6 +650,7 @@
       }
 
       if (eventName === 'vet:care-saved') {
+        if (saveVetCareButton) saveVetCareButton.disabled = false;
         setMessage(vetCareMessage, 'Ficha de atención guardada correctamente.', 'success');
         toast('Ficha veterinaria guardada.');
         requestVeterinarianCases();
@@ -657,6 +658,7 @@
       }
 
       if (eventName === 'vet:error') {
+        if (saveVetCareButton && currentVetCaseId) saveVetCareButton.disabled = false;
         setMessage(vetCareMessage, data.message || 'No fue posible completar la operación veterinaria.', 'error');
         toast(data.message || 'No fue posible completar la operación veterinaria.');
         return;
