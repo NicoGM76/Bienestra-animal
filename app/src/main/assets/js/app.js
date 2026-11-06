@@ -60,6 +60,8 @@
   const adminRoleMetrics = document.getElementById('adminRoleMetrics');
   const adminCaseMetrics = document.getElementById('adminCaseMetrics');
   const adminRecentList = document.getElementById('adminRecentList');
+  const adminAssignmentList = document.getElementById('adminAssignmentList');
+  const adminAssignmentMessage = document.getElementById('adminAssignmentMessage');
   const reportTitle = document.getElementById('reportTitle');
   const reportHeader = document.getElementById('reportHeader');
   const reportLead = document.getElementById('reportLead');
@@ -82,6 +84,8 @@
     clearNode(caseList);
     clearNode(vetCaseList);
     clearNode(adminRecentList);
+    clearNode(adminAssignmentList);
+    if (adminAssignmentMessage) setMessage(adminAssignmentMessage, '');
 
     [vetMetrics, adminMetrics, adminRoleMetrics, adminCaseMetrics].forEach(container => {
       if (!container) return;
@@ -392,7 +396,78 @@
   };
 
 
+  const renderAdminAssignments = (cases, users) => {
+    if (!adminAssignmentList) return;
+    clearNode(adminAssignmentList);
+
+    const receivedCases = (Array.isArray(cases) ? cases : []).filter(item => item.status === 'received');
+    const veterinarians = (Array.isArray(users) ? users : []).filter(
+      user => user.activeRole === 'veterinarian' && user.status === 'active'
+    );
+
+    if (receivedCases.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = 'No hay casos pendientes de asignación';
+      const detail = document.createElement('span');
+      detail.textContent = 'Cuando llegue un nuevo caso en estado recibido aparecerá aquí.';
+      empty.append(title, detail);
+      adminAssignmentList.appendChild(empty);
+      return;
+    }
+
+    if (veterinarians.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = 'No hay veterinarios activos';
+      const detail = document.createElement('span');
+      detail.textContent = 'Se necesita al menos una cuenta veterinaria activa para asignar casos.';
+      empty.append(title, detail);
+      adminAssignmentList.appendChild(empty);
+      return;
+    }
+
+    receivedCases.forEach(item => {
+      const card = document.createElement('article');
+      card.className = 'admin-assignment-card';
+
+      const title = document.createElement('strong');
+      title.textContent = typeLabel(item.type);
+
+      const detail = document.createElement('span');
+      detail.textContent = [
+        statusLabel(item.status),
+        item.neighborhoodOrVillage || 'Zipaquirá',
+        item.animalCondition || 'Condición no registrada',
+        priorityLabel(item.finalPriority)
+      ].filter(Boolean).join(' · ');
+
+      const select = document.createElement('select');
+      select.dataset.adminVetSelect = 'true';
+      veterinarians.forEach(veterinarian => {
+        const option = document.createElement('option');
+        option.value = veterinarian.uid;
+        option.textContent = veterinarian.name || veterinarian.email || 'Veterinario';
+        select.appendChild(option);
+      });
+
+      const button = document.createElement('button');
+      button.className = 'btn primary block';
+      button.dataset.adminAssignCaseId = item.id;
+      button.textContent = 'Asignar caso';
+
+      card.append(title, detail, select, button);
+      adminAssignmentList.appendChild(card);
+    });
+  };
+
+
   const renderAdminDashboard = (data) => {
+    renderAdminAssignments(data.cases || [], data.users || []);
+    if (adminAssignmentMessage) setMessage(adminAssignmentMessage, '');
+
     if (adminMetrics) {
       const cards = adminMetrics.querySelectorAll('.metric-card strong');
       if (cards[0]) cards[0].textContent = String(data.userCount || 0);
@@ -669,7 +744,27 @@
         return;
       }
 
+      if (eventName === 'admin:case-assigned') {
+        document.querySelectorAll('[data-admin-assign-case-id]').forEach(button => {
+          button.disabled = false;
+        });
+        setMessage(
+          adminAssignmentMessage,
+          `Caso asignado correctamente a ${data.veterinarianName || 'veterinario'}.`,
+          'success'
+        );
+        toast('Caso asignado correctamente.');
+        requestAdminDashboard();
+        return;
+      }
+
       if (eventName === 'admin:error') {
+        document.querySelectorAll('[data-admin-assign-case-id]').forEach(button => {
+          button.disabled = false;
+        });
+        if (currentRole === 'administrator') {
+          setMessage(adminAssignmentMessage, data.message || 'No fue posible completar la operación administrativa.', 'error');
+        }
         toast(data.message || 'No fue posible cargar el panel administrativo.');
         return;
       }
@@ -688,6 +783,30 @@
     if (reportAction) {
       event.preventDefault();
       configureReport(reportAction.dataset.reportType);
+      return;
+    }
+
+    const adminAssign = event.target.closest('[data-admin-assign-case-id]');
+    if (adminAssign) {
+      event.preventDefault();
+      const card = adminAssign.closest('.admin-assignment-card');
+      const select = card ? card.querySelector('[data-admin-vet-select]') : null;
+      const veterinarianUid = select ? select.value : '';
+      const caseId = adminAssign.dataset.adminAssignCaseId || '';
+
+      if (!caseId || !veterinarianUid) {
+        setMessage(adminAssignmentMessage, 'Selecciona un veterinario válido.', 'error');
+        return;
+      }
+
+      if (!window.Android || typeof window.Android.assignCaseToVeterinarian !== 'function') {
+        setMessage(adminAssignmentMessage, 'La asignación requiere ejecutar la app Android.', 'error');
+        return;
+      }
+
+      adminAssign.disabled = true;
+      setMessage(adminAssignmentMessage, 'Asignando caso…');
+      Android.assignCaseToVeterinarian(caseId, veterinarianUid);
       return;
     }
 
