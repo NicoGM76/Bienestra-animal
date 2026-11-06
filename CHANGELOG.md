@@ -2,6 +2,30 @@
 
 Todos los cambios relevantes del proyecto Bienestar Animal Zipaquirá se registran en este archivo.
 
+## [0.4.2-beta] - Asignación operativa desde Administrador
+
+### Añadido
+- Asignación de casos recibidos desde el portal Administrador.
+- Selección de veterinarios institucionales activos.
+- Auditoría de asignación mediante `assignedBy`, `assignedAt`, `assignedTo` y `assignedRole`.
+- Transición administrativa controlada `received -> assigned`.
+- Regla Firestore específica que limita al administrador exclusivamente a los campos de asignación autorizados.
+- Prueba de contrato para el flujo Admin -> Veterinario.
+
+### Cambiado
+- `versionCode` pasa de 5 a 6.
+- `versionName` pasa de `0.4.1-beta` a `0.4.2-beta`.
+- El portal Administrador deja de ser estrictamente de solo lectura y obtiene una única operación de escritura acotada: asignar casos recibidos.
+
+### Se mantiene fuera de alcance
+- Reasignación de casos ya iniciados.
+- Edición general de casos por Administrador.
+- Creación de cuentas institucionales desde la app.
+- Historia clínica longitudinal independiente del caso.
+- Adjuntos multimedia.
+
+---
+
 ## [0.4.1-beta] - Expansión institucional de pre-sustentación
 
 ### Añadido
@@ -21,7 +45,6 @@ Todos los cambios relevantes del proyecto Bienestar Animal Zipaquirá se registr
 - Los portales institucionales dejan de ser vistas mínimas y pasan a soportar un flujo operativo demostrable.
 
 ### Se mantiene fuera de alcance
-- Asignación de casos desde el portal administrador.
 - Historia clínica longitudinal independiente del caso.
 - Prescripción farmacológica estructurada.
 - Adjuntos multimedia.
