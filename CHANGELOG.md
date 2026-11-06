@@ -2,6 +2,33 @@
 
 Todos los cambios relevantes del proyecto Bienestar Animal Zipaquirá se registran en este archivo.
 
+## [0.4.1-beta] - Expansión institucional de pre-sustentación
+
+### Añadido
+- Resumen de carga veterinaria con casos asignados, en atención y finalizados.
+- Vista de ficha clínica por caso asignado.
+- Registro veterinario de diagnóstico, observaciones, tratamiento y recomendaciones.
+- Persistencia de la atención clínica dentro del caso en Firestore.
+- Restricción de escritura clínica al veterinario asignado y solo durante `in_progress`.
+- Panel administrativo con distribución de cuentas por rol.
+- Panel administrativo con distribución de casos por estado.
+- Actividad institucional ampliada y profesional asignado visible en casos recientes.
+- Contratos automáticos para la expansión Veterinario/Admin.
+
+### Cambiado
+- `versionCode` pasa de 4 a 5.
+- `versionName` pasa de `0.4.0-beta` a `0.4.1-beta`.
+- Los portales institucionales dejan de ser vistas mínimas y pasan a soportar un flujo operativo demostrable.
+
+### Se mantiene fuera de alcance
+- Asignación de casos desde el portal administrador.
+- Historia clínica longitudinal independiente del caso.
+- Prescripción farmacológica estructurada.
+- Adjuntos multimedia.
+- Coordinador y funcionario de campo.
+
+---
+
 ## [0.4.0-beta] - Pre-sustentación
 
 ### Añadido
