@@ -21,6 +21,33 @@ class FirebaseAdminGateway(
                     .addOnSuccessListener { animalsSnapshot ->
                         firestore.collection("cases").get()
                             .addOnSuccessListener { casesSnapshot ->
+                                val userNames = usersSnapshot.documents.associate { document ->
+                                    document.id to (document.getString("name").orEmpty().ifBlank { "Cuenta institucional" })
+                                }
+
+                                val citizenCount = usersSnapshot.documents.count {
+                                    it.getString("activeRole") == "citizen"
+                                }
+                                val veterinarianCount = usersSnapshot.documents.count {
+                                    it.getString("activeRole") == "veterinarian"
+                                }
+                                val administratorCount = usersSnapshot.documents.count {
+                                    it.getString("activeRole") == "administrator"
+                                }
+
+                                val receivedCaseCount = casesSnapshot.documents.count {
+                                    (it.getString("status") ?: "received") == "received"
+                                }
+                                val assignedCaseCount = casesSnapshot.documents.count {
+                                    it.getString("status") == "assigned"
+                                }
+                                val inProgressCaseCount = casesSnapshot.documents.count {
+                                    it.getString("status") == "in_progress"
+                                }
+                                val completedCaseCount = casesSnapshot.documents.count {
+                                    it.getString("status") == "completed"
+                                }
+
                                 val users = usersSnapshot.documents
                                     .map { document ->
                                         AdminUserSummary(
@@ -31,8 +58,16 @@ class FirebaseAdminGateway(
                                             status = document.getString("status").orEmpty(),
                                         )
                                     }
-                                    .sortedBy { it.name.lowercase() }
-                                    .take(5)
+                                    .sortedWith(
+                                        compareBy<AdminUserSummary> {
+                                            when (it.activeRole) {
+                                                "administrator" -> 0
+                                                "veterinarian" -> 1
+                                                else -> 2
+                                            }
+                                        }.thenBy { it.name.lowercase() }
+                                    )
+                                    .take(8)
 
                                 val animals = animalsSnapshot.documents
                                     .map { document ->
@@ -44,18 +79,25 @@ class FirebaseAdminGateway(
                                         )
                                     }
                                     .sortedBy { it.name.lowercase() }
-                                    .take(5)
+                                    .take(8)
 
                                 val cases = casesSnapshot.documents
                                     .sortedByDescending { it.getTimestamp("createdAt")?.seconds ?: 0L }
-                                    .take(5)
+                                    .take(8)
                                     .map { document ->
+                                        val assignedTo = document.getString("assignedTo").orEmpty()
                                         AdminCaseSummary(
                                             id = document.id,
                                             type = document.getString("type").orEmpty(),
                                             status = document.getString("status") ?: "received",
                                             finalPriority = document.getString("finalPriority") ?: "pending_review",
                                             neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
+                                            animalCondition = document.getString("animalCondition").orEmpty(),
+                                            assignedToName = if (assignedTo.isBlank()) {
+                                                "Sin asignar"
+                                            } else {
+                                                userNames[assignedTo] ?: "Cuenta institucional"
+                                            },
                                         )
                                     }
 
@@ -64,6 +106,14 @@ class FirebaseAdminGateway(
                                         userCount = usersSnapshot.size(),
                                         animalCount = animalsSnapshot.size(),
                                         caseCount = casesSnapshot.size(),
+                                        activeCaseCount = assignedCaseCount + inProgressCaseCount,
+                                        citizenCount = citizenCount,
+                                        veterinarianCount = veterinarianCount,
+                                        administratorCount = administratorCount,
+                                        receivedCaseCount = receivedCaseCount,
+                                        assignedCaseCount = assignedCaseCount,
+                                        inProgressCaseCount = inProgressCaseCount,
+                                        completedCaseCount = completedCaseCount,
                                         users = users,
                                         animals = animals,
                                         cases = cases,
