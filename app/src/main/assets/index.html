@@ -194,7 +194,7 @@
           <div><h1>Portal administrador</h1><p class="lead compact" id="adminSignedInUser">Sesión institucional.</p></div>
           <div class="avatar">AD</div>
         </div>
-        <div class="info-box"><span>🔒</span><p>Panel institucional de consulta. En esta Beta el administrador supervisa información, pero no modifica registros desde la app.</p></div>
+        <div class="info-box"><span>🔒</span><p>Panel institucional de supervisión. En esta Beta el administrador puede consultar información y asignar casos recibidos a veterinarios activos.</p></div>
 
         <h2>RESUMEN GENERAL</h2>
         <div id="adminMetrics" class="metric-grid" aria-live="polite">
@@ -218,6 +218,16 @@
           <div class="metric-card"><strong>—</strong><span>En atención</span></div>
           <div class="metric-card"><strong>—</strong><span>Finalizados</span></div>
         </div>
+
+        <h2>ASIGNACIÓN DE CASOS</h2>
+        <div class="info-box"><span>📋</span><p>Los casos recibidos pueden asignarse a un veterinario activo. Una vez asignados, el profesional podrá iniciar la atención desde su portal.</p></div>
+        <div id="adminAssignmentList" class="admin-assignment-list" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando casos pendientes…</strong>
+            <span>Se mostrarán únicamente los casos en estado recibido.</span>
+          </div>
+        </div>
+        <p id="adminAssignmentMessage" class="form-message" role="status" aria-live="polite"></p>
 
         <h2>ACTIVIDAD INSTITUCIONAL</h2>
         <div id="adminRecentList" class="admin-activity" aria-live="polite">
