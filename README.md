@@ -1,4 +1,4 @@
-# Bienestar Animal Zipaquirá — Beta 0.4
+# Bienestar Animal Zipaquirá — Beta 0.4.1
 
 Aplicación Android híbrida para la gestión y bienestar animal del municipio de Zipaquirá, con enfoque prioritario en zonas rurales.
 
@@ -9,7 +9,7 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 - **Firebase Authentication** para identidad.
 - **Cloud Firestore** para perfiles, animales y casos.
 - Variante de prueba: `demoDebug` con paquete `com.bienestaranimal.zipaquira.demo`.
-- `versionCode = 4` y `versionName = 0.4.0-beta`.
+- `versionCode = 5` y `versionName = 0.4.1-beta`.
 - El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
 - La aplicación **no usa GPS**. La ubicación se registra manualmente mediante municipio, barrio/vereda/sector, finca/predio/dirección y punto de referencia.
 
@@ -31,13 +31,24 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 - Cambio controlado de estado:
   - `assigned -> in_progress`
   - `in_progress -> completed`
+- Resumen de carga: asignados, en atención y finalizados.
+- Ficha de atención clínica por caso en curso:
+  - diagnóstico o impresión clínica;
+  - observaciones;
+  - tratamiento o conducta;
+  - recomendaciones y seguimiento.
+- La ficha queda asociada al caso en Firestore y solo puede editarla el veterinario asignado mientras el caso está `in_progress`.
 - No recibe en la interfaz la identidad del ciudadano denunciante.
 
 ### Administrador
 - Inicio de sesión con cuenta institucional.
 - Portal propio de solo lectura.
 - Conteo real de usuarios, animales y casos.
-- Muestra de usuarios, animales y casos almacenados en Firestore.
+- Indicadores de cuentas por rol: ciudadanos, veterinarios y administradores.
+- Seguimiento de casos por estado: recibidos, asignados, en atención y finalizados.
+- Actividad institucional con cuentas, animales y casos recientes.
+- Identificación del profesional asignado a cada caso cuando existe.
+- Vista de solo lectura: no modifica registros desde la aplicación.
 
 ## Seguridad de roles
 
