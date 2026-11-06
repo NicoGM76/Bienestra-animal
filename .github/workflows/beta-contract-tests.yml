@@ -27,5 +27,8 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Check JavaScript syntax
+        run: node --check app/src/main/assets/js/app.js
+
       - name: Run contract tests
         run: python -m unittest discover -s tests -v
