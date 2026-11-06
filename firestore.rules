@@ -51,6 +51,13 @@ service cloud.firestore {
       && data.status == "active";
     }
 
+    function isActiveVeterinarian(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.status == "active"
+        && get(/databases/$(database)/documents/users/$(uid)).data.activeRole == "veterinarian"
+        && get(/databases/$(database)/documents/users/$(uid)).data.roles.hasAny(["veterinarian"]);
+    }
+
     function veterinarianStatusTransitionAllowed() {
       return (
           resource.data.status == "assigned"
@@ -108,33 +115,55 @@ service cloud.firestore {
                   )
                   || isAdministrator();
 
-      allow update: if isVeterinarian()
-                    && resource.data.assignedTo == request.auth.uid
-                    && request.resource.data.assignedTo == request.auth.uid
-                    && (
-                      (
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
-                        && veterinarianStatusTransitionAllowed()
-                        && request.resource.data.updatedAt == request.time
-                      )
-                      ||
-                      (
-                        resource.data.status == "in_progress"
-                        && request.resource.data.status == resource.data.status
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                          "veterinaryDiagnosis",
-                          "veterinaryObservations",
-                          "veterinaryTreatment",
-                          "veterinaryRecommendations",
-                          "veterinaryUpdatedBy",
-                          "veterinaryUpdatedAt",
-                          "updatedAt"
-                        ])
-                        && request.resource.data.veterinaryDiagnosis is string
-                        && request.resource.data.veterinaryTreatment is string
-                        && request.resource.data.veterinaryUpdatedBy == request.auth.uid
-                        && request.resource.data.veterinaryUpdatedAt == request.time
-                        && request.resource.data.updatedAt == request.time
+      allow update: if (
+                      isAdministrator()
+                      && resource.data.status == "received"
+                      && request.resource.data.status == "assigned"
+                      && request.resource.data.assignedTo is string
+                      && request.resource.data.assignedRole == "veterinarian"
+                      && isActiveVeterinarian(request.resource.data.assignedTo)
+                      && request.resource.data.assignedBy == request.auth.uid
+                      && request.resource.data.assignedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "assignedTo",
+                        "assignedRole",
+                        "assignedBy",
+                        "assignedAt",
+                        "status",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    (
+                      isVeterinarian()
+                      && resource.data.assignedTo == request.auth.uid
+                      && request.resource.data.assignedTo == request.auth.uid
+                      && (
+                        (
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+                          && veterinarianStatusTransitionAllowed()
+                          && request.resource.data.updatedAt == request.time
+                        )
+                        ||
+                        (
+                          resource.data.status == "in_progress"
+                          && request.resource.data.status == resource.data.status
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                            "veterinaryDiagnosis",
+                            "veterinaryObservations",
+                            "veterinaryTreatment",
+                            "veterinaryRecommendations",
+                            "veterinaryUpdatedBy",
+                            "veterinaryUpdatedAt",
+                            "updatedAt"
+                          ])
+                          && request.resource.data.veterinaryDiagnosis is string
+                          && request.resource.data.veterinaryTreatment is string
+                          && request.resource.data.veterinaryUpdatedBy == request.auth.uid
+                          && request.resource.data.veterinaryUpdatedAt == request.time
+                          && request.resource.data.updatedAt == request.time
+                        )
                       )
                     );
 
