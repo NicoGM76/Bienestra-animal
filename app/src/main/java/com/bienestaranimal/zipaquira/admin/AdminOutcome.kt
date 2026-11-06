@@ -22,6 +22,7 @@ data class AdminCaseSummary(
     val finalPriority: String,
     val neighborhoodOrVillage: String,
     val animalCondition: String,
+    val assignedToUid: String,
     val assignedToName: String,
 )
 
@@ -41,6 +42,12 @@ sealed class AdminOutcome {
         val users: List<AdminUserSummary>,
         val animals: List<AdminAnimalSummary>,
         val cases: List<AdminCaseSummary>,
+    ) : AdminOutcome()
+
+    data class Assigned(
+        val caseId: String,
+        val veterinarianUid: String,
+        val veterinarianName: String,
     ) : AdminOutcome()
 
     data class Error(val message: String) : AdminOutcome()
