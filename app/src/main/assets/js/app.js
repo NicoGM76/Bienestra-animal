@@ -1055,6 +1055,7 @@
       if (eventName === 'vet:case-updated') {
         toast('Estado del caso actualizado.');
         requestVeterinarianCases();
+        requestNotifications();
         return;
       }
 
@@ -1063,6 +1064,14 @@
         setMessage(vetCareMessage, 'Ficha de atención guardada correctamente.', 'success');
         toast('Ficha veterinaria guardada.');
         requestVeterinarianCases();
+        requestClinicalHistory(data.caseId || currentVetCaseId);
+        return;
+      }
+
+      if (eventName === 'vet:history') {
+        if (!currentVetCaseId || data.caseId === currentVetCaseId) {
+          renderClinicalHistory(data.records || []);
+        }
         return;
       }
 
@@ -1092,12 +1101,41 @@
         return;
       }
 
+      if (eventName === 'admin:case-changed') {
+        if (data.action === 'priority_updated') {
+          toast('Prioridad institucional actualizada.');
+        } else if (data.action === 'reassigned') {
+          toast(`Caso reasignado a ${data.veterinarianName || 'veterinario'}.`);
+        } else {
+          toast('Caso actualizado.');
+        }
+        requestAdminDashboard();
+        go('admin-home');
+        return;
+      }
+
+      if (eventName === 'notifications:list') {
+        renderNotifications(data.notifications || []);
+        return;
+      }
+
+      if (eventName === 'notifications:read') {
+        requestNotifications();
+        return;
+      }
+
+      if (eventName === 'notifications:error') {
+        toast(data.message || 'No fue posible cargar las notificaciones.');
+        return;
+      }
+
       if (eventName === 'admin:error') {
         document.querySelectorAll('[data-admin-assign-case-id]').forEach(button => {
           button.disabled = false;
         });
         if (currentRole === 'administrator') {
           setMessage(adminAssignmentMessage, data.message || 'No fue posible completar la operación administrativa.', 'error');
+          setMessage(adminCaseMessage, data.message || 'No fue posible completar la operación administrativa.', 'error');
         }
         toast(data.message || 'No fue posible cargar el panel administrativo.');
         return;
@@ -1117,6 +1155,22 @@
     if (reportAction) {
       event.preventDefault();
       configureReport(reportAction.dataset.reportType);
+      return;
+    }
+
+    const adminOpen = event.target.closest('[data-admin-open-case-id]');
+    if (adminOpen) {
+      event.preventDefault();
+      openAdminCase(adminOpen.dataset.adminOpenCaseId);
+      return;
+    }
+
+    const notificationRead = event.target.closest('[data-notification-read-id]');
+    if (notificationRead) {
+      event.preventDefault();
+      if (window.Android && typeof window.Android.markNotificationRead === 'function') {
+        Android.markNotificationRead(notificationRead.dataset.notificationReadId);
+      }
       return;
     }
 
@@ -1159,6 +1213,51 @@
       }
       return;
     }
+  });
+
+  [vetCaseSearch, vetStatusFilter].forEach(control => {
+    if (control) control.addEventListener('input', () => renderVeterinarianCases(currentVetCases, true));
+    if (control && control.tagName === 'SELECT') {
+      control.addEventListener('change', () => renderVeterinarianCases(currentVetCases, true));
+    }
+  });
+
+  [adminCaseSearch, adminStatusFilter, adminPriorityFilter, adminTypeFilter].forEach(control => {
+    if (control) control.addEventListener('input', renderAdminCaseManagement);
+    if (control && control.tagName === 'SELECT') {
+      control.addEventListener('change', renderAdminCaseManagement);
+    }
+  });
+
+  if (useAiPriorityButton) useAiPriorityButton.addEventListener('click', () => {
+    const item = currentAdminCases.find(candidate => candidate.id === currentAdminCaseId);
+    if (!item || !adminPrioritySelect) return;
+    if (['low', 'medium', 'high', 'critical'].includes(item.aiSuggestedPriority)) {
+      adminPrioritySelect.value = item.aiSuggestedPriority;
+      setMessage(adminCaseMessage, 'Sugerencia aplicada al selector. Aún debes guardar la prioridad.');
+    }
+  });
+
+  if (saveAdminPriorityButton) saveAdminPriorityButton.addEventListener('click', () => {
+    if (!currentAdminCaseId || !adminPrioritySelect) return;
+    if (!window.Android || typeof window.Android.updateAdminCasePriority !== 'function') {
+      setMessage(adminCaseMessage, 'La actualización requiere ejecutar la app Android.', 'error');
+      return;
+    }
+    saveAdminPriorityButton.disabled = true;
+    setMessage(adminCaseMessage, 'Actualizando prioridad…');
+    Android.updateAdminCasePriority(currentAdminCaseId, adminPrioritySelect.value);
+  });
+
+  if (adminReassignButton) adminReassignButton.addEventListener('click', () => {
+    if (!currentAdminCaseId || !adminReassignVetSelect) return;
+    if (!window.Android || typeof window.Android.reassignCaseToVeterinarian !== 'function') {
+      setMessage(adminCaseMessage, 'La reasignación requiere ejecutar la app Android.', 'error');
+      return;
+    }
+    adminReassignButton.disabled = true;
+    setMessage(adminCaseMessage, 'Reasignando caso…');
+    Android.reassignCaseToVeterinarian(currentAdminCaseId, adminReassignVetSelect.value);
   });
 
   if (saveVetCareButton) saveVetCareButton.addEventListener('click', () => {
