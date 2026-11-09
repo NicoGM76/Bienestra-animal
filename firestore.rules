@@ -58,12 +58,22 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(uid)).data.roles.hasAny(["veterinarian"]);
     }
 
+    function caseWasReceived() {
+      return !resource.data.keys().hasAny(["status"])
+        || resource.data.status in ["received", "recibido", "Recibido", "new", "nuevo"];
+    }
+
+    function caseIsCompleted() {
+      return resource.data.keys().hasAny(["status"])
+        && resource.data.status in ["completed", "realizado", "finalizado", "cerrado", "closed"];
+    }
+
     function veterinarianStatusTransitionAllowed() {
       return (
-          resource.data.status == "assigned"
+          resource.data.status in ["assigned", "asignado"]
           && request.resource.data.status == "in_progress"
         ) || (
-          resource.data.status == "in_progress"
+          resource.data.status in ["in_progress", "en_atencion", "en atención"]
           && request.resource.data.status == "completed"
         );
     }
@@ -75,7 +85,7 @@ service cloud.firestore {
       allow read: if ownsUserDocument(uid)
                   || isAdministrator();
 
-      // Los roles institucionales se administran fuera del cliente en esta Beta.
+      // Los roles institucionales se administran fuera del cliente.
       allow update: if false;
       allow delete: if false;
     }
@@ -115,9 +125,10 @@ service cloud.firestore {
                   )
                   || isAdministrator();
 
+      // 1) Administrador: asignación inicial received -> assigned.
       allow update: if (
                       isAdministrator()
-                      && resource.data.status == "received"
+                      && caseWasReceived()
                       && request.resource.data.status == "assigned"
                       && request.resource.data.assignedTo is string
                       && request.resource.data.assignedRole == "veterinarian"
@@ -125,7 +136,9 @@ service cloud.firestore {
                       && request.resource.data.assignedBy == request.auth.uid
                       && request.resource.data.assignedAt == request.time
                       && request.resource.data.updatedAt == request.time
+                      && request.resource.data.schemaVersion == 2
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "schemaVersion",
                         "assignedTo",
                         "assignedRole",
                         "assignedBy",
@@ -135,6 +148,48 @@ service cloud.firestore {
                       ])
                     )
                     ||
+                    // 2) Administrador: reasignación mientras aún no inicia atención.
+                    (
+                      isAdministrator()
+                      && resource.data.status in ["assigned", "asignado"]
+                      && request.resource.data.status == resource.data.status
+                      && request.resource.data.assignedTo is string
+                      && request.resource.data.assignedTo != resource.data.assignedTo
+                      && request.resource.data.assignedRole == "veterinarian"
+                      && isActiveVeterinarian(request.resource.data.assignedTo)
+                      && request.resource.data.assignedBy == request.auth.uid
+                      && request.resource.data.assignedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.schemaVersion == 2
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "schemaVersion",
+                        "assignedTo",
+                        "assignedRole",
+                        "assignedBy",
+                        "assignedAt",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 3) Administrador: prioridad institucional sin tocar el resto del caso.
+                    (
+                      isAdministrator()
+                      && !caseIsCompleted()
+                      && request.resource.data.finalPriority in ["low", "medium", "high", "critical"]
+                      && request.resource.data.priorityReviewedBy == request.auth.uid
+                      && request.resource.data.priorityReviewedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.schemaVersion == 2
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "schemaVersion",
+                        "finalPriority",
+                        "priorityReviewedBy",
+                        "priorityReviewedAt",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 4) Veterinario: transiciones de estado permitidas.
                     (
                       isVeterinarian()
                       && resource.data.assignedTo == request.auth.uid
@@ -146,8 +201,9 @@ service cloud.firestore {
                           && request.resource.data.updatedAt == request.time
                         )
                         ||
+                        // 5) Veterinario: última fotografía clínica del caso.
                         (
-                          resource.data.status == "in_progress"
+                          resource.data.status in ["in_progress", "en_atencion", "en atención"]
                           && request.resource.data.status == resource.data.status
                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                             "veterinaryDiagnosis",
@@ -166,6 +222,74 @@ service cloud.firestore {
                         )
                       )
                     );
+
+      allow delete: if false;
+
+      match /attentions/{attentionId} {
+        allow read: if isAdministrator()
+                    || (
+                      isVeterinarian()
+                      && get(/databases/$(database)/documents/cases/$(caseId)).data.assignedTo == request.auth.uid
+                    );
+
+        allow create: if isVeterinarian()
+                      && get(/databases/$(database)/documents/cases/$(caseId)).data.assignedTo == request.auth.uid
+                      && get(/databases/$(database)/documents/cases/$(caseId)).data.status in ["in_progress", "en_atencion", "en atención"]
+                      && request.resource.data.caseId == caseId
+                      && request.resource.data.veterinarianUid == request.auth.uid
+                      && request.resource.data.diagnosis is string
+                      && request.resource.data.treatment is string
+                      && request.resource.data.createdAt == request.time
+                      && request.resource.data.keys().hasAll([
+                        "recordId",
+                        "caseId",
+                        "veterinarianUid",
+                        "diagnosis",
+                        "observations",
+                        "treatment",
+                        "recommendations",
+                        "source",
+                        "createdAt"
+                      ]);
+
+        allow update, delete: if false;
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn()
+                  && resource.data.recipientUid == request.auth.uid;
+
+      allow create: if (
+                      isAdministrator()
+                      && request.resource.data.createdBy == request.auth.uid
+                      && request.resource.data.senderRole == "administrator"
+                      && request.resource.data.type in ["case_assigned", "case_reassigned"]
+                      && isActiveVeterinarian(request.resource.data.recipientUid)
+                      && request.resource.data.read == false
+                      && request.resource.data.createdAt == request.time
+                    )
+                    ||
+                    (
+                      isVeterinarian()
+                      && request.resource.data.createdBy == request.auth.uid
+                      && request.resource.data.senderRole == "veterinarian"
+                      && request.resource.data.type in ["case_in_progress", "case_completed"]
+                      && get(/databases/$(database)/documents/cases/$(request.resource.data.caseId)).data.assignedTo == request.auth.uid
+                      && get(/databases/$(database)/documents/cases/$(request.resource.data.caseId)).data.createdBy == request.resource.data.recipientUid
+                      && request.resource.data.read == false
+                      && request.resource.data.createdAt == request.time
+                    );
+
+      allow update: if signedIn()
+                    && resource.data.recipientUid == request.auth.uid
+                    && request.resource.data.recipientUid == request.auth.uid
+                    && request.resource.data.read == true
+                    && request.resource.data.readAt == request.time
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      "read",
+                      "readAt"
+                    ]);
 
       allow delete: if false;
     }
