@@ -254,3 +254,106 @@ input:disabled {
   width:100%;
   margin:4px 0 10px;
 }
+
+
+/* Beta 0.5.0 advanced case operations */
+.filter-bar,
+.filter-panel {
+  display:grid;
+  gap:10px;
+  margin:10px 0 14px;
+}
+.filter-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.filter-bar {
+  grid-template-columns:2fr 1fr;
+}
+.admin-case-list,
+.notification-list,
+.clinical-history {
+  display:grid;
+  gap:12px;
+}
+.admin-case-card,
+.notification-card,
+.clinical-record,
+.ai-card {
+  padding:14px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.admin-case-card {
+  display:grid;
+  gap:8px;
+}
+.admin-case-card .case-card-top,
+.notification-card .notification-top {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.admin-case-card span,
+.notification-card span,
+.clinical-record span {
+  color:var(--muted);
+  line-height:1.4;
+}
+.admin-case-card .legacy-pill,
+.ai-pill {
+  display:inline-flex;
+  width:max-content;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  background:var(--surface-alt);
+  color:var(--primary);
+}
+.notification-card.unread {
+  border-width:2px;
+}
+.notification-card button {
+  margin-top:8px;
+}
+.notification-card small,
+.clinical-record small,
+.ai-card small {
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+}
+.clinical-record {
+  display:grid;
+  gap:7px;
+}
+.clinical-record strong {
+  color:var(--primary);
+}
+.ai-card {
+  background:var(--surface-alt);
+  margin-bottom:12px;
+}
+.ai-card strong {
+  display:block;
+  color:var(--primary);
+  margin-bottom:6px;
+}
+.ai-card p {
+  margin:0;
+  line-height:1.45;
+}
+#adminReassignPanel {
+  margin-top:18px;
+}
+@media (max-width: 520px) {
+  .filter-grid,
+  .filter-bar {
+    grid-template-columns:1fr;
+  }
+}
