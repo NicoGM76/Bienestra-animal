@@ -21,5 +21,16 @@ class LegacyCaseCompatibilityContractTest(unittest.TestCase):
         self.assertIn("caseWasReceived", rules)
 
 
+    def test_hidden_legacy_notice_respects_visibility(self):
+        styles = (ROOT / "app/src/main/assets/css/styles.css").read_text(encoding="utf-8")
+        html = (ROOT / "app/src/main/assets/index.html").read_text(encoding="utf-8")
+        js = (ROOT / "app/src/main/assets/js/app.js").read_text(encoding="utf-8")
+
+        self.assertIn("[hidden]", styles)
+        self.assertIn("display: none !important", styles)
+        self.assertIn('id="adminLegacyNotice"', html)
+        self.assertIn("adminLegacyNotice.hidden = !item.legacy", js)
+
+
 if __name__ == "__main__":
     unittest.main()
