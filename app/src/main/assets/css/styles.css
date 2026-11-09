@@ -357,3 +357,9 @@ input:disabled {
     grid-template-columns:1fr;
   }
 }
+
+
+/* Respect semantic visibility even when component styles define display. */
+[hidden] {
+  display: none !important;
+}
