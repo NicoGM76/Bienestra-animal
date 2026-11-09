@@ -2,6 +2,7 @@ package com.bienestaranimal.zipaquira.cases
 
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -29,17 +30,22 @@ class FirebaseCaseGateway(
             return
         }
 
+        val suggestion = CasePriorityAssistant.suggest(value)
         val document = firestore.collection("cases").document()
         val isProtected = value.type == "abuse"
         val finalPriority = if (value.userPriority == "system") "pending_review" else value.userPriority
         val data = mapOf(
+            "schemaVersion" to 2,
             "caseId" to document.id,
             "type" to value.type,
             "description" to value.description,
             "animalCount" to value.animalCount,
             "animalCondition" to value.animalCondition,
             "userPriority" to value.userPriority,
-            "aiSuggestedPriority" to null,
+            "aiSuggestedPriority" to suggestion.priority,
+            "aiPriorityReason" to suggestion.reason,
+            "aiPriorityScore" to suggestion.score,
+            "aiModelVersion" to suggestion.version,
             "finalPriority" to finalPriority,
             "status" to "received",
             "municipality" to value.municipality,
@@ -115,13 +121,15 @@ class FirebaseCaseGateway(
         }
 
         val normalizedId = caseId.trim()
-        val normalizedStatus = newStatus.trim()
+        val normalizedStatus = CaseCompatibility.normalizeStatus(newStatus)
         if (normalizedId.isBlank()) {
             callback(CaseOutcome.Error("El caso no es válido."))
             return
         }
 
         val document = firestore.collection("cases").document(normalizedId)
+        val notificationRef = firestore.collection("notifications").document()
+
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(document)
             if (!snapshot.exists()) {
@@ -133,7 +141,7 @@ class FirebaseCaseGateway(
                 throw IllegalStateException("Este caso no está asignado a tu cuenta.")
             }
 
-            val currentStatus = snapshot.getString("status").orEmpty()
+            val currentStatus = CaseCompatibility.status(snapshot)
             if ((currentStatus to normalizedStatus) !in allowedTransitions) {
                 throw IllegalStateException("La transición de estado no está permitida.")
             }
@@ -145,6 +153,39 @@ class FirebaseCaseGateway(
                     "updatedAt" to FieldValue.serverTimestamp(),
                 ),
             )
+
+            val citizenUid = snapshot.getString("createdBy").orEmpty()
+            if (citizenUid.isNotBlank()) {
+                val notification = when (normalizedStatus) {
+                    "in_progress" -> mapOf(
+                        "recipientUid" to citizenUid,
+                        "createdBy" to user.uid,
+                        "senderRole" to "veterinarian",
+                        "title" to "Tu caso está en atención",
+                        "body" to "El profesional asignado inició la atención de tu reporte.",
+                        "type" to "case_in_progress",
+                        "caseId" to normalizedId,
+                        "read" to false,
+                        "createdAt" to FieldValue.serverTimestamp(),
+                    )
+                    "completed" -> mapOf(
+                        "recipientUid" to citizenUid,
+                        "createdBy" to user.uid,
+                        "senderRole" to "veterinarian",
+                        "title" to "Atención finalizada",
+                        "body" to "El caso reportado fue marcado como atendido por el profesional asignado.",
+                        "type" to "case_completed",
+                        "caseId" to normalizedId,
+                        "read" to false,
+                        "createdAt" to FieldValue.serverTimestamp(),
+                    )
+                    else -> null
+                }
+
+                if (notification != null) {
+                    transaction.set(notificationRef, notification)
+                }
+            }
         }.addOnSuccessListener {
             callback(CaseOutcome.Updated(normalizedId, normalizedStatus))
         }.addOnFailureListener { error ->
@@ -188,6 +229,8 @@ class FirebaseCaseGateway(
         }
 
         val document = firestore.collection("cases").document(normalizedId)
+        val recordRef = document.collection("attentions").document()
+
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(document)
             if (!snapshot.exists()) {
@@ -198,9 +241,24 @@ class FirebaseCaseGateway(
                 throw IllegalStateException("Este caso no está asignado a tu cuenta.")
             }
 
-            if (snapshot.getString("status").orEmpty() != "in_progress") {
+            if (CaseCompatibility.status(snapshot) != "in_progress") {
                 throw IllegalStateException("Inicia la atención antes de registrar la ficha clínica.")
             }
+
+            transaction.set(
+                recordRef,
+                mapOf(
+                    "recordId" to recordRef.id,
+                    "caseId" to normalizedId,
+                    "veterinarianUid" to user.uid,
+                    "diagnosis" to normalizedDiagnosis,
+                    "observations" to normalizedObservations,
+                    "treatment" to normalizedTreatment,
+                    "recommendations" to normalizedRecommendations,
+                    "source" to "veterinary_care",
+                    "createdAt" to FieldValue.serverTimestamp(),
+                ),
+            )
 
             transaction.update(
                 document,
@@ -215,28 +273,117 @@ class FirebaseCaseGateway(
                 ),
             )
         }.addOnSuccessListener {
-            callback(CaseOutcome.CareSaved(normalizedId))
+            callback(CaseOutcome.CareSaved(normalizedId, recordRef.id))
         }.addOnFailureListener { error ->
             callback(CaseOutcome.Error(transactionMessageFor(error, "No fue posible guardar la atención veterinaria.")))
         }
     }
 
-    private fun toSummary(document: com.google.firebase.firestore.DocumentSnapshot): CaseSummary =
+    override fun listClinicalHistory(caseId: String, callback: (CaseOutcome) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(CaseOutcome.Error("Debes iniciar sesión para consultar el historial clínico."))
+            return
+        }
+
+        val normalizedId = caseId.trim()
+        if (normalizedId.isBlank()) {
+            callback(CaseOutcome.Error("El caso no es válido."))
+            return
+        }
+
+        val caseRef = firestore.collection("cases").document(normalizedId)
+        caseRef.collection("attentions")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val records = snapshot.documents
+                    .map(::toClinicalRecord)
+                    .sortedByDescending { it.createdAtMillis }
+
+                if (records.isNotEmpty()) {
+                    callback(CaseOutcome.HistoryListed(normalizedId, records))
+                    return@addOnSuccessListener
+                }
+
+                caseRef.get()
+                    .addOnSuccessListener { caseDocument ->
+                        val diagnosis = caseDocument.getString("veterinaryDiagnosis").orEmpty()
+                        val treatment = caseDocument.getString("veterinaryTreatment").orEmpty()
+                        if (diagnosis.isBlank() && treatment.isBlank()) {
+                            callback(CaseOutcome.HistoryListed(normalizedId, emptyList()))
+                            return@addOnSuccessListener
+                        }
+
+                        val legacyRecord = ClinicalRecordSummary(
+                            id = "legacy-$normalizedId",
+                            diagnosis = diagnosis,
+                            observations = caseDocument.getString("veterinaryObservations").orEmpty(),
+                            treatment = treatment,
+                            recommendations = caseDocument.getString("veterinaryRecommendations").orEmpty(),
+                            veterinarianUid = caseDocument.getString("veterinaryUpdatedBy").orEmpty(),
+                            createdAtMillis = (
+                                caseDocument.getTimestamp("veterinaryUpdatedAt")
+                                    ?: caseDocument.getTimestamp("updatedAt")
+                                )?.toDate()?.time ?: 0L,
+                            source = "legacy_case_snapshot",
+                        )
+                        callback(CaseOutcome.HistoryListed(normalizedId, listOf(legacyRecord)))
+                    }
+                    .addOnFailureListener { error ->
+                        callback(CaseOutcome.Error(userMessageFor(error, "No fue posible recuperar el historial clínico.")))
+                    }
+            }
+            .addOnFailureListener { error ->
+                callback(CaseOutcome.Error(userMessageFor(error, "No fue posible recuperar el historial clínico.")))
+            }
+    }
+
+    private fun toSummary(document: DocumentSnapshot): CaseSummary =
         CaseSummary(
             id = document.id,
-            type = document.getString("type").orEmpty(),
-            status = document.getString("status") ?: "received",
-            finalPriority = document.getString("finalPriority") ?: "pending_review",
-            description = document.getString("description").orEmpty(),
-            animalCount = (document.getLong("animalCount") ?: 1L).toInt(),
-            neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
-            addressOrLocation = document.getString("addressOrLocation").orEmpty(),
-            referencePoint = document.getString("referencePoint").orEmpty(),
-            animalCondition = document.getString("animalCondition").orEmpty(),
+            type = CaseCompatibility.text(document, "type", "caseType").ifBlank { "unknown" },
+            status = CaseCompatibility.status(document),
+            finalPriority = CaseCompatibility.priority(document),
+            description = CaseCompatibility.text(document, "description", "details", "notes"),
+            animalCount = CaseCompatibility.count(document),
+            neighborhoodOrVillage = CaseCompatibility.text(
+                document,
+                "neighborhoodOrVillage",
+                "neighborhood",
+                "village",
+                "sector",
+            ),
+            addressOrLocation = CaseCompatibility.text(
+                document,
+                "addressOrLocation",
+                "address",
+                "location",
+                "property",
+            ),
+            referencePoint = CaseCompatibility.text(document, "referencePoint", "reference"),
+            animalCondition = CaseCompatibility.text(document, "animalCondition", "condition"),
+            aiSuggestedPriority = CaseCompatibility.normalizePriority(
+                document.getString("aiSuggestedPriority")
+            ),
+            aiPriorityReason = document.getString("aiPriorityReason").orEmpty(),
+            aiModelVersion = document.getString("aiModelVersion").orEmpty(),
+            legacy = CaseCompatibility.isLegacy(document),
             veterinaryDiagnosis = document.getString("veterinaryDiagnosis").orEmpty(),
             veterinaryObservations = document.getString("veterinaryObservations").orEmpty(),
             veterinaryTreatment = document.getString("veterinaryTreatment").orEmpty(),
             veterinaryRecommendations = document.getString("veterinaryRecommendations").orEmpty(),
+        )
+
+    private fun toClinicalRecord(document: DocumentSnapshot): ClinicalRecordSummary =
+        ClinicalRecordSummary(
+            id = document.id,
+            diagnosis = document.getString("diagnosis").orEmpty(),
+            observations = document.getString("observations").orEmpty(),
+            treatment = document.getString("treatment").orEmpty(),
+            recommendations = document.getString("recommendations").orEmpty(),
+            veterinarianUid = document.getString("veterinarianUid").orEmpty(),
+            createdAtMillis = document.getTimestamp("createdAt")?.toDate()?.time ?: 0L,
+            source = document.getString("source").orEmpty().ifBlank { "veterinary_care" },
         )
 
     private fun transactionMessageFor(error: Exception, fallback: String): String =
@@ -246,9 +393,11 @@ class FirebaseCaseGateway(
             userMessageFor(error, fallback)
         }
 
-    private fun userMessageFor(error: Exception, fallback: String = "No fue posible completar la operación con el reporte. Intenta de nuevo."): String =
-        when (error) {
-            is FirebaseNetworkException -> "No hay conexión con el servicio. Revisa tu Internet."
-            else -> fallback
-        }
+    private fun userMessageFor(
+        error: Exception,
+        fallback: String = "No fue posible completar la operación con el reporte. Intenta de nuevo.",
+    ): String = when (error) {
+        is FirebaseNetworkException -> "No hay conexión con el servicio. Revisa tu Internet."
+        else -> fallback
+    }
 }
