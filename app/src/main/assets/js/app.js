@@ -330,19 +330,45 @@
     if (values[2]) values[2].textContent = String(completed);
   };
 
-  const renderVeterinarianCases = (cases) => {
-    if (!vetCaseList) return;
-    currentVetCases = Array.isArray(cases) ? cases : [];
-    renderVeterinarianMetrics(currentVetCases);
-    while (vetCaseList.firstChild) vetCaseList.removeChild(vetCaseList.firstChild);
+  const filteredVeterinarianCases = () => {
+    const query = (vetCaseSearch ? vetCaseSearch.value : '').trim().toLowerCase();
+    const status = vetStatusFilter ? vetStatusFilter.value : '';
 
-    if (currentVetCases.length === 0) {
+    return currentVetCases.filter(item => {
+      const haystack = [
+        item.type,
+        item.description,
+        item.neighborhoodOrVillage,
+        item.addressOrLocation,
+        item.referencePoint,
+        item.animalCondition,
+        item.finalPriority
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return (!query || haystack.includes(query))
+        && (!status || item.status === status);
+    });
+  };
+
+  const renderVeterinarianCases = (cases, preserveSource = false) => {
+    if (!vetCaseList) return;
+    if (!preserveSource) {
+      currentVetCases = Array.isArray(cases) ? cases : [];
+      renderVeterinarianMetrics(currentVetCases);
+    }
+
+    const visibleCases = preserveSource ? filteredVeterinarianCases() : filteredVeterinarianCases();
+    clearNode(vetCaseList);
+
+    if (visibleCases.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       const title = document.createElement('strong');
-      title.textContent = 'No tienes casos asignados';
+      title.textContent = currentVetCases.length ? 'No hay resultados con estos filtros' : 'No tienes casos asignados';
       const detail = document.createElement('span');
-      detail.textContent = 'Cuando se asigne un caso a tu cuenta aparecerá aquí.';
+      detail.textContent = currentVetCases.length
+        ? 'Prueba con otro texto o estado.'
+        : 'Cuando se asigne un caso a tu cuenta aparecerá aquí.';
       empty.append(title, detail);
       vetCaseList.appendChild(empty);
       return;
@@ -350,7 +376,7 @@
 
     const grid = document.createElement('div');
     grid.className = 'case-grid';
-    currentVetCases.forEach(item => {
+    visibleCases.forEach(item => {
       const card = document.createElement('article');
       card.className = 'case-card';
 
@@ -379,6 +405,13 @@
         : 'Sin descripción adicional.';
 
       card.append(top, location, condition, status, summary);
+
+      if (item.legacy) {
+        const legacy = document.createElement('span');
+        legacy.className = 'legacy-pill';
+        legacy.textContent = 'Registro legado compatible';
+        card.appendChild(legacy);
+      }
 
       const detailAction = document.createElement('button');
       detailAction.className = 'btn ghost block';
@@ -446,6 +479,251 @@
     }
 
     go('vet-care');
+    requestClinicalHistory(item.id);
+  };
+
+  const renderClinicalHistory = (records) => {
+    if (!vetClinicalHistory) return;
+    clearNode(vetClinicalHistory);
+
+    if (!Array.isArray(records) || records.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = 'Aún no hay atenciones registradas';
+      const detail = document.createElement('span');
+      detail.textContent = 'Cuando guardes una ficha aparecerá aquí sin sobrescribir las anteriores.';
+      empty.append(title, detail);
+      vetClinicalHistory.appendChild(empty);
+      return;
+    }
+
+    records.forEach((record, index) => {
+      const card = document.createElement('article');
+      card.className = 'clinical-record';
+      const title = document.createElement('strong');
+      title.textContent = record.source === 'legacy_case_snapshot'
+        ? 'Registro clínico legado'
+        : `Atención #${records.length - index}`;
+
+      const diagnosis = document.createElement('span');
+      diagnosis.textContent = `Diagnóstico: ${record.diagnosis || 'No registrado'}`;
+      const treatment = document.createElement('span');
+      treatment.textContent = `Tratamiento: ${record.treatment || 'No registrado'}`;
+      const observations = document.createElement('span');
+      observations.textContent = `Observaciones: ${record.observations || 'Sin observaciones'}`;
+      const recommendations = document.createElement('span');
+      recommendations.textContent = `Seguimiento: ${record.recommendations || 'Sin recomendaciones'}`;
+      const date = document.createElement('small');
+      date.textContent = record.createdAtMillis
+        ? new Date(record.createdAtMillis).toLocaleString('es-CO')
+        : 'Fecha no disponible';
+
+      card.append(title, diagnosis, observations, treatment, recommendations, date);
+      vetClinicalHistory.appendChild(card);
+    });
+  };
+
+  const renderNotifications = (notifications) => {
+    const target = currentRole === 'veterinarian'
+      ? vetNotificationList
+      : (currentRole === 'citizen' ? citizenNotificationList : null);
+    if (!target) return;
+    clearNode(target);
+
+    const list = Array.isArray(notifications) ? notifications : [];
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = 'No tienes notificaciones';
+      const detail = document.createElement('span');
+      detail.textContent = 'Las novedades importantes de tus casos aparecerán aquí.';
+      empty.append(title, detail);
+      target.appendChild(empty);
+      return;
+    }
+
+    list.forEach(item => {
+      const card = document.createElement('article');
+      card.className = `notification-card${item.read ? '' : ' unread'}`;
+
+      const top = document.createElement('div');
+      top.className = 'notification-top';
+      const title = document.createElement('strong');
+      title.textContent = item.title || 'Notificación';
+      const status = document.createElement('span');
+      status.textContent = item.read ? 'Leída' : 'Nueva';
+      top.append(title, status);
+
+      const body = document.createElement('span');
+      body.textContent = item.body || '';
+      card.append(top, body);
+
+      if (item.createdAtMillis) {
+        const date = document.createElement('small');
+        date.textContent = new Date(item.createdAtMillis).toLocaleString('es-CO');
+        card.appendChild(date);
+      }
+
+      if (!item.read) {
+        const button = document.createElement('button');
+        button.className = 'btn ghost block';
+        button.dataset.notificationReadId = item.id;
+        button.textContent = 'Marcar como leída';
+        card.appendChild(button);
+      }
+
+      target.appendChild(card);
+    });
+  };
+
+
+  const filteredAdminCases = () => {
+    const query = (adminCaseSearch ? adminCaseSearch.value : '').trim().toLowerCase();
+    const status = adminStatusFilter ? adminStatusFilter.value : '';
+    const priority = adminPriorityFilter ? adminPriorityFilter.value : '';
+    const type = adminTypeFilter ? adminTypeFilter.value : '';
+
+    return currentAdminCases.filter(item => {
+      const haystack = [
+        item.type,
+        item.description,
+        item.municipality,
+        item.neighborhoodOrVillage,
+        item.addressOrLocation,
+        item.referencePoint,
+        item.animalCondition,
+        item.assignedToName
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return (!query || haystack.includes(query))
+        && (!status || item.status === status)
+        && (!priority || item.finalPriority === priority)
+        && (!type || item.type === type);
+    });
+  };
+
+  const renderAdminCaseManagement = () => {
+    if (!adminCaseList) return;
+    clearNode(adminCaseList);
+    const cases = filteredAdminCases();
+
+    if (cases.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = currentAdminCases.length ? 'No hay casos con estos filtros' : 'No hay casos registrados';
+      const detail = document.createElement('span');
+      detail.textContent = currentAdminCases.length ? 'Ajusta los filtros de búsqueda.' : 'Los nuevos reportes aparecerán aquí.';
+      empty.append(title, detail);
+      adminCaseList.appendChild(empty);
+      return;
+    }
+
+    cases.forEach(item => {
+      const card = document.createElement('article');
+      card.className = 'admin-case-card';
+
+      const top = document.createElement('div');
+      top.className = 'case-card-top';
+      const title = document.createElement('strong');
+      title.textContent = typeLabel(item.type);
+      const priority = document.createElement('em');
+      priority.className = item.finalPriority === 'critical' || item.finalPriority === 'high' ? 'status review' : 'status ok';
+      priority.textContent = priorityLabel(item.finalPriority);
+      top.append(title, priority);
+
+      const line = document.createElement('span');
+      line.textContent = [
+        statusLabel(item.status),
+        item.neighborhoodOrVillage || item.municipality || 'Zipaquirá',
+        item.animalCondition || 'Condición no registrada',
+        item.assignedToName || 'Sin asignar'
+      ].join(' · ');
+
+      const summary = document.createElement('span');
+      const text = item.description || 'Sin descripción adicional.';
+      summary.textContent = text.length > 120 ? text.slice(0, 117) + '…' : text;
+
+      card.append(top, line, summary);
+      if (item.legacy) {
+        const legacy = document.createElement('span');
+        legacy.className = 'legacy-pill';
+        legacy.textContent = 'Legado';
+        card.appendChild(legacy);
+      }
+
+      const button = document.createElement('button');
+      button.className = 'btn ghost block';
+      button.dataset.adminOpenCaseId = item.id;
+      button.textContent = 'Abrir expediente';
+      card.appendChild(button);
+      adminCaseList.appendChild(card);
+    });
+  };
+
+  const openAdminCase = (caseId) => {
+    const item = currentAdminCases.find(candidate => candidate.id === caseId);
+    if (!item) {
+      toast('No fue posible abrir el expediente.');
+      return;
+    }
+
+    currentAdminCaseId = item.id;
+    if (adminCaseTitle) adminCaseTitle.textContent = typeLabel(item.type);
+    if (adminCaseSummary) adminCaseSummary.textContent = `Caso ${item.id.slice(0, 8)} · ${item.animalCount || 1} animal(es)`;
+    if (adminCaseStatus) adminCaseStatus.textContent = statusLabel(item.status);
+    if (adminCasePriority) adminCasePriority.textContent = priorityLabel(item.finalPriority);
+    if (adminCaseVet) adminCaseVet.textContent = item.assignedToName || 'Sin asignar';
+    if (adminCaseLocation) {
+      adminCaseLocation.textContent = [item.municipality, item.neighborhoodOrVillage, item.addressOrLocation, item.referencePoint]
+        .filter(Boolean).join(' · ') || 'Ubicación no registrada';
+    }
+    if (adminCaseDescription) {
+      adminCaseDescription.textContent = [
+        item.animalCondition ? `Condición: ${item.animalCondition}.` : '',
+        item.description || 'Sin descripción adicional.'
+      ].filter(Boolean).join(' ');
+    }
+    if (adminLegacyNotice) adminLegacyNotice.hidden = !item.legacy;
+
+    const aiAvailable = item.aiSuggestedPriority && item.aiSuggestedPriority !== 'pending_review';
+    if (adminAiPriority) {
+      adminAiPriority.textContent = aiAvailable
+        ? `Sugerencia: ${priorityLabel(item.aiSuggestedPriority)}`
+        : 'Sin sugerencia disponible';
+    }
+    if (adminAiReason) {
+      adminAiReason.textContent = aiAvailable
+        ? (item.aiPriorityReason || 'Sugerencia generada por el asistente beta.')
+        : 'Este caso no tiene análisis IA, normalmente porque pertenece a una versión anterior.';
+    }
+
+    const currentPriority = ['low', 'medium', 'high', 'critical'].includes(item.finalPriority)
+      ? item.finalPriority
+      : (aiAvailable ? item.aiSuggestedPriority : 'medium');
+    if (adminPrioritySelect) adminPrioritySelect.value = currentPriority;
+
+    if (adminReassignVetSelect) {
+      clearNode(adminReassignVetSelect);
+      currentAdminUsers
+        .filter(user => user.activeRole === 'veterinarian' && user.status === 'active')
+        .forEach(veterinarian => {
+          const option = document.createElement('option');
+          option.value = veterinarian.uid;
+          option.textContent = veterinarian.name || veterinarian.email || 'Veterinario';
+          option.selected = veterinarian.uid === item.assignedToUid;
+          adminReassignVetSelect.appendChild(option);
+        });
+    }
+
+    const canReassign = item.status === 'assigned';
+    if (adminReassignPanel) adminReassignPanel.hidden = !canReassign;
+    if (saveAdminPriorityButton) saveAdminPriorityButton.disabled = item.status === 'completed';
+    if (useAiPriorityButton) useAiPriorityButton.disabled = !aiAvailable || item.status === 'completed';
+    setMessage(adminCaseMessage, '');
+    go('admin-case');
   };
 
 
@@ -518,7 +796,10 @@
 
 
   const renderAdminDashboard = (data) => {
-    renderAdminAssignments(data.cases || [], data.users || []);
+    currentAdminCases = Array.isArray(data.cases) ? data.cases : [];
+    currentAdminUsers = Array.isArray(data.users) ? data.users : [];
+    renderAdminCaseManagement();
+    renderAdminAssignments(currentAdminCases, currentAdminUsers);
     if (adminAssignmentMessage) setMessage(adminAssignmentMessage, '');
 
     if (adminMetrics) {
