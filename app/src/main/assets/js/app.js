@@ -9,7 +9,8 @@
     adoptions: 'citizen',
     'vet-home': 'veterinarian',
     'vet-care': 'veterinarian',
-    'admin-home': 'administrator'
+    'admin-home': 'administrator',
+    'admin-case': 'administrator'
   };
 
   const canOpenScreen = (name) => !protectedScreenRoles[name] || protectedScreenRoles[name] === currentRole;
@@ -62,6 +63,33 @@
   const adminRecentList = document.getElementById('adminRecentList');
   const adminAssignmentList = document.getElementById('adminAssignmentList');
   const adminAssignmentMessage = document.getElementById('adminAssignmentMessage');
+  const citizenNotificationList = document.getElementById('citizenNotificationList');
+  const vetNotificationList = document.getElementById('vetNotificationList');
+  const vetClinicalHistory = document.getElementById('vetClinicalHistory');
+  const vetCaseSearch = document.getElementById('vetCaseSearch');
+  const vetStatusFilter = document.getElementById('vetStatusFilter');
+  const adminCaseList = document.getElementById('adminCaseList');
+  const adminCaseSearch = document.getElementById('adminCaseSearch');
+  const adminStatusFilter = document.getElementById('adminStatusFilter');
+  const adminPriorityFilter = document.getElementById('adminPriorityFilter');
+  const adminTypeFilter = document.getElementById('adminTypeFilter');
+  const adminCaseTitle = document.getElementById('adminCaseTitle');
+  const adminCaseSummary = document.getElementById('adminCaseSummary');
+  const adminCaseStatus = document.getElementById('adminCaseStatus');
+  const adminCasePriority = document.getElementById('adminCasePriority');
+  const adminCaseVet = document.getElementById('adminCaseVet');
+  const adminCaseLocation = document.getElementById('adminCaseLocation');
+  const adminCaseDescription = document.getElementById('adminCaseDescription');
+  const adminLegacyNotice = document.getElementById('adminLegacyNotice');
+  const adminAiPriority = document.getElementById('adminAiPriority');
+  const adminAiReason = document.getElementById('adminAiReason');
+  const adminPrioritySelect = document.getElementById('adminPrioritySelect');
+  const useAiPriorityButton = document.getElementById('useAiPriorityButton');
+  const saveAdminPriorityButton = document.getElementById('saveAdminPriorityButton');
+  const adminReassignPanel = document.getElementById('adminReassignPanel');
+  const adminReassignVetSelect = document.getElementById('adminReassignVetSelect');
+  const adminReassignButton = document.getElementById('adminReassignButton');
+  const adminCaseMessage = document.getElementById('adminCaseMessage');
   const reportTitle = document.getElementById('reportTitle');
   const reportHeader = document.getElementById('reportHeader');
   const reportLead = document.getElementById('reportLead');
@@ -70,6 +98,9 @@
   let currentReportType = 'lost';
   let currentVetCases = [];
   let currentVetCaseId = '';
+  let currentAdminCases = [];
+  let currentAdminUsers = [];
+  let currentAdminCaseId = '';
 
   const clearNode = (node) => {
     if (!node) return;
@@ -80,12 +111,20 @@
     currentRole = '';
     currentVetCases = [];
     currentVetCaseId = '';
+    currentAdminCases = [];
+    currentAdminUsers = [];
+    currentAdminCaseId = '';
     clearNode(animalList);
     clearNode(caseList);
     clearNode(vetCaseList);
     clearNode(adminRecentList);
     clearNode(adminAssignmentList);
+    clearNode(adminCaseList);
+    clearNode(citizenNotificationList);
+    clearNode(vetNotificationList);
+    clearNode(vetClinicalHistory);
     if (adminAssignmentMessage) setMessage(adminAssignmentMessage, '');
+    if (adminCaseMessage) setMessage(adminCaseMessage, '');
 
     [vetMetrics, adminMetrics, adminRoleMetrics, adminCaseMetrics].forEach(container => {
       if (!container) return;
@@ -167,6 +206,18 @@
     }
   };
 
+  const requestNotifications = () => {
+    if (window.Android && typeof window.Android.loadNotifications === 'function') {
+      Android.loadNotifications();
+    }
+  };
+
+  const requestClinicalHistory = (caseId) => {
+    if (caseId && window.Android && typeof window.Android.loadClinicalHistory === 'function') {
+      Android.loadClinicalHistory(caseId);
+    }
+  };
+
   const openPortalForRole = (data) => {
     const role = data && data.activeRole ? data.activeRole : '';
     const displayName = data && data.name ? data.name : (data && data.email ? data.email : 'Usuario');
@@ -178,6 +229,7 @@
       go('home');
       requestMyAnimals();
       requestMyCases();
+      requestNotifications();
       return;
     }
 
@@ -186,6 +238,7 @@
       if (vetSignedInUser) vetSignedInUser.textContent = `Sesión: ${displayName}`;
       go('vet-home');
       requestVeterinarianCases();
+      requestNotifications();
       return;
     }
 
