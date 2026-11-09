@@ -121,6 +121,15 @@
             <span>Consultando los casos asociados a tu cuenta.</span>
           </div>
         </div>
+
+        <h2>NOTIFICACIONES</h2>
+        <div id="citizenNotificationList" class="notification-list" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando notificaciones…</strong>
+            <span>Aquí verás novedades de los casos que reportaste.</span>
+          </div>
+        </div>
+
         <button id="logoutButton" class="btn ghost block">Cerrar sesión</button>
         <p class="progress-note">Demo funcional: autenticación, perfiles, animales y reportes usan Firebase real.</p>
       </div>
@@ -143,7 +152,24 @@
           <div class="metric-card"><strong>—</strong><span>Finalizados</span></div>
         </div>
 
+        <h2>NOTIFICACIONES</h2>
+        <div id="vetNotificationList" class="notification-list" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando notificaciones…</strong>
+            <span>Las nuevas asignaciones aparecerán aquí.</span>
+          </div>
+        </div>
+
         <h2>CASOS ASIGNADOS</h2>
+        <div class="filter-bar">
+          <input id="vetCaseSearch" type="search" placeholder="Buscar por ubicación, descripción o condición" />
+          <select id="vetStatusFilter">
+            <option value="">Todos los estados</option>
+            <option value="assigned">Asignados</option>
+            <option value="in_progress">En atención</option>
+            <option value="completed">Finalizados</option>
+          </select>
+        </div>
         <div id="vetCaseList" aria-live="polite">
           <div class="empty-state">
             <strong>Cargando casos asignados…</strong>
@@ -183,6 +209,16 @@
 
         <p id="vetCareMessage" class="form-message" role="status" aria-live="polite"></p>
         <button id="saveVetCareButton" class="btn primary block">Guardar ficha de atención</button>
+
+        <h2>HISTORIAL CLÍNICO</h2>
+        <div class="info-box"><span>🗂</span><p>Cada guardado genera una entrada independiente. Los casos anteriores a esta función se muestran como registro legado cuando existe información clínica.</p></div>
+        <div id="vetClinicalHistory" class="clinical-history" aria-live="polite">
+          <div class="empty-state">
+            <strong>Sin historial cargado</strong>
+            <span>Abre un caso para consultar sus atenciones anteriores.</span>
+          </div>
+        </div>
+
         <button class="btn ghost block" data-go="vet-home">Volver a casos</button>
       </div>
     </section>
@@ -219,6 +255,40 @@
           <div class="metric-card"><strong>—</strong><span>Finalizados</span></div>
         </div>
 
+        <h2>GESTIÓN DE CASOS</h2>
+        <div class="filter-panel">
+          <input id="adminCaseSearch" type="search" placeholder="Buscar caso por ubicación, descripción, condición o veterinario" />
+          <div class="filter-grid">
+            <select id="adminStatusFilter">
+              <option value="">Todos los estados</option>
+              <option value="received">Recibidos</option>
+              <option value="assigned">Asignados</option>
+              <option value="in_progress">En atención</option>
+              <option value="completed">Finalizados</option>
+            </select>
+            <select id="adminPriorityFilter">
+              <option value="">Todas las prioridades</option>
+              <option value="pending_review">Pendiente</option>
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
+            <select id="adminTypeFilter">
+              <option value="">Todos los tipos</option>
+              <option value="lost">Pérdida</option>
+              <option value="found">Hallazgo</option>
+              <option value="abuse">Presunto maltrato</option>
+            </select>
+          </div>
+        </div>
+        <div id="adminCaseList" class="admin-case-list" aria-live="polite">
+          <div class="empty-state">
+            <strong>Cargando expedientes…</strong>
+            <span>Consulta, filtra y abre los casos registrados.</span>
+          </div>
+        </div>
+
         <h2>ASIGNACIÓN DE CASOS</h2>
         <div class="info-box"><span>📋</span><p>Los casos recibidos pueden asignarse a un veterinario activo. Una vez asignados, el profesional podrá iniciar la atención desde su portal.</p></div>
         <div id="adminAssignmentList" class="admin-assignment-list" aria-live="polite">
@@ -237,6 +307,51 @@
           </div>
         </div>
         <button id="adminLogoutButton" class="btn ghost block">Cerrar sesión</button>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="admin-case" aria-label="Detalle administrativo del caso">
+      <div class="step-header"><button data-go="admin-home">←</button><strong>Gestión de caso</strong><span>Supervisión institucional</span></div>
+      <div class="page-content roomy">
+        <div class="demo-badge">EXPEDIENTE INSTITUCIONAL · FIRESTORE</div>
+        <h1 id="adminCaseTitle">Detalle del caso</h1>
+        <p id="adminCaseSummary" class="lead">Selecciona un caso desde el portal administrador.</p>
+
+        <div class="care-context-card">
+          <div><span>Estado</span><strong id="adminCaseStatus">—</strong></div>
+          <div><span>Prioridad</span><strong id="adminCasePriority">—</strong></div>
+          <div><span>Profesional</span><strong id="adminCaseVet">—</strong></div>
+        </div>
+
+        <div id="adminLegacyNotice" class="info-box" hidden><span>🧩</span><p>Registro legado detectado. La aplicación está usando valores compatibles para campos que no existían en versiones anteriores.</p></div>
+        <div class="info-box"><span>📍</span><p id="adminCaseLocation">Ubicación del caso.</p></div>
+        <div class="info-box"><span>📋</span><p id="adminCaseDescription">Descripción del caso.</p></div>
+
+        <h2>ASISTENTE DE PRIORIDAD · IA BETA</h2>
+        <div id="adminAiBox" class="ai-card">
+          <strong id="adminAiPriority">Sin sugerencia disponible</strong>
+          <p id="adminAiReason">Los casos antiguos pueden no tener análisis automático.</p>
+          <small>Apoyo experimental. La decisión final permanece en el administrador.</small>
+        </div>
+
+        <label for="adminPrioritySelect">Prioridad institucional</label>
+        <select id="adminPrioritySelect">
+          <option value="low">Baja</option>
+          <option value="medium">Media</option>
+          <option value="high">Alta</option>
+          <option value="critical">Crítica</option>
+        </select>
+        <button id="useAiPriorityButton" class="btn ghost block">Usar sugerencia de IA</button>
+        <button id="saveAdminPriorityButton" class="btn primary block">Guardar prioridad</button>
+
+        <div id="adminReassignPanel">
+          <label for="adminReassignVetSelect">Veterinario asignado</label>
+          <select id="adminReassignVetSelect"></select>
+          <button id="adminReassignButton" class="btn secondary block">Reasignar antes de iniciar atención</button>
+        </div>
+
+        <p id="adminCaseMessage" class="form-message" role="status" aria-live="polite"></p>
+        <button class="btn ghost block" data-go="admin-home">Volver al panel</button>
       </div>
     </section>
 
