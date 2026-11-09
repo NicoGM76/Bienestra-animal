@@ -18,6 +18,8 @@ import com.bienestaranimal.zipaquira.cases.CaseDraft
 import com.bienestaranimal.zipaquira.cases.CaseGateway
 import com.bienestaranimal.zipaquira.cases.CaseInputValidator
 import com.bienestaranimal.zipaquira.cases.CaseOutcome
+import com.bienestaranimal.zipaquira.notifications.NotificationGateway
+import com.bienestaranimal.zipaquira.notifications.NotificationOutcome
 import com.bienestaranimal.zipaquira.web.BridgeMessagePolicy
 import com.bienestaranimal.zipaquira.web.WebEventSink
 import org.json.JSONArray
@@ -33,6 +35,7 @@ class WebAppInterface(
     private val animalGateway: AnimalGateway,
     private val caseGateway: CaseGateway,
     private val adminGateway: AdminGateway,
+    private val notificationGateway: NotificationGateway,
     private val eventSink: WebEventSink,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -192,6 +195,7 @@ class WebAppInterface(
                 is CaseOutcome.Listed -> emitCaseList(outcome)
                 is CaseOutcome.Updated -> Unit
                 is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
             }
         }
     }
@@ -206,6 +210,7 @@ class WebAppInterface(
                 is CaseOutcome.Saved -> Unit
                 is CaseOutcome.Updated -> Unit
                 is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
             }
         }
     }
@@ -220,6 +225,7 @@ class WebAppInterface(
                 is CaseOutcome.Saved -> Unit
                 is CaseOutcome.Updated -> Unit
                 is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
             }
         }
     }
@@ -240,6 +246,7 @@ class WebAppInterface(
                 is CaseOutcome.Saved -> Unit
                 is CaseOutcome.Listed -> Unit
                 is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
             }
         }
     }
@@ -280,6 +287,7 @@ class WebAppInterface(
             when (outcome) {
                 is AdminOutcome.Loaded -> emitAdminDashboard(outcome)
                 is AdminOutcome.Assigned -> Unit
+                is AdminOutcome.CaseChanged -> Unit
                 is AdminOutcome.Error -> eventSink.emit(
                     "admin:error",
                     JSONObject().put("message", outcome.message).toString(),
@@ -306,6 +314,98 @@ class WebAppInterface(
                     JSONObject().put("message", outcome.message).toString(),
                 )
                 is AdminOutcome.Loaded -> Unit
+                is AdminOutcome.CaseChanged -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun reassignCaseToVeterinarian(caseId: String, veterinarianUid: String) {
+        eventSink.emit("admin:loading", JSONObject().put("action", "reassign").toString())
+        adminGateway.reassignCase(caseId, veterinarianUid) { outcome ->
+            when (outcome) {
+                is AdminOutcome.CaseChanged -> eventSink.emit(
+                    "admin:case-changed",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("action", outcome.action)
+                        .put("veterinarianName", outcome.veterinarianName)
+                        .toString(),
+                )
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is AdminOutcome.Loaded -> Unit
+                is AdminOutcome.Assigned -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun updateAdminCasePriority(caseId: String, priority: String) {
+        eventSink.emit("admin:loading", JSONObject().put("action", "priority").toString())
+        adminGateway.updateCasePriority(caseId, priority) { outcome ->
+            when (outcome) {
+                is AdminOutcome.CaseChanged -> eventSink.emit(
+                    "admin:case-changed",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("action", outcome.action)
+                        .toString(),
+                )
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is AdminOutcome.Loaded -> Unit
+                is AdminOutcome.Assigned -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun loadClinicalHistory(caseId: String) {
+        eventSink.emit("vet:loading", JSONObject().put("action", "history").toString())
+        caseGateway.listClinicalHistory(caseId) { outcome ->
+            when (outcome) {
+                is CaseOutcome.HistoryListed -> emitClinicalHistory(outcome)
+                is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
+                is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.Listed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun loadNotifications() {
+        notificationGateway.listMine { outcome ->
+            when (outcome) {
+                is NotificationOutcome.Listed -> emitNotifications(outcome)
+                is NotificationOutcome.Error -> eventSink.emit(
+                    "notifications:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is NotificationOutcome.Read -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun markNotificationRead(notificationId: String) {
+        notificationGateway.markRead(notificationId) { outcome ->
+            when (outcome) {
+                is NotificationOutcome.Read -> eventSink.emit(
+                    "notifications:read",
+                    JSONObject().put("notificationId", outcome.notificationId).toString(),
+                )
+                is NotificationOutcome.Error -> eventSink.emit(
+                    "notifications:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is NotificationOutcome.Listed -> Unit
             }
         }
     }
@@ -388,10 +488,19 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
+                    .put("description", item.description)
+                    .put("animalCount", item.animalCount)
+                    .put("municipality", item.municipality)
                     .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("addressOrLocation", item.addressOrLocation)
+                    .put("referencePoint", item.referencePoint)
                     .put("animalCondition", item.animalCondition)
                     .put("assignedToUid", item.assignedToUid)
-                    .put("assignedToName", item.assignedToName),
+                    .put("assignedToName", item.assignedToName)
+                    .put("aiSuggestedPriority", item.aiSuggestedPriority)
+                    .put("aiPriorityReason", item.aiPriorityReason)
+                    .put("aiModelVersion", item.aiModelVersion)
+                    .put("legacy", item.legacy),
             )
         }
 
@@ -431,6 +540,9 @@ class WebAppInterface(
                     .put("addressOrLocation", item.addressOrLocation)
                     .put("referencePoint", item.referencePoint)
                     .put("animalCondition", item.animalCondition)
+                    .put("aiSuggestedPriority", item.aiSuggestedPriority)
+                    .put("aiPriorityReason", item.aiPriorityReason)
+                    .put("legacy", item.legacy)
                     .put("veterinaryDiagnosis", item.veterinaryDiagnosis)
                     .put("veterinaryObservations", item.veterinaryObservations)
                     .put("veterinaryTreatment", item.veterinaryTreatment)
@@ -438,6 +550,50 @@ class WebAppInterface(
             )
         }
         eventSink.emit("vet:cases", JSONObject().put("cases", cases).toString())
+    }
+
+    private fun emitClinicalHistory(outcome: CaseOutcome.HistoryListed) {
+        val records = JSONArray()
+        outcome.records.forEach { record ->
+            records.put(
+                JSONObject()
+                    .put("id", record.id)
+                    .put("diagnosis", record.diagnosis)
+                    .put("observations", record.observations)
+                    .put("treatment", record.treatment)
+                    .put("recommendations", record.recommendations)
+                    .put("veterinarianUid", record.veterinarianUid)
+                    .put("createdAtMillis", record.createdAtMillis)
+                    .put("source", record.source),
+            )
+        }
+        eventSink.emit(
+            "vet:history",
+            JSONObject()
+                .put("caseId", outcome.caseId)
+                .put("records", records)
+                .toString(),
+        )
+    }
+
+    private fun emitNotifications(outcome: NotificationOutcome.Listed) {
+        val notifications = JSONArray()
+        outcome.notifications.forEach { item ->
+            notifications.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("title", item.title)
+                    .put("body", item.body)
+                    .put("type", item.type)
+                    .put("caseId", item.caseId)
+                    .put("read", item.read)
+                    .put("createdAtMillis", item.createdAtMillis),
+            )
+        }
+        eventSink.emit(
+            "notifications:list",
+            JSONObject().put("notifications", notifications).toString(),
+        )
     }
 
     private fun emitVeterinarianError(message: String) {
