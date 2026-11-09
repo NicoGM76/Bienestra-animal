@@ -2,6 +2,43 @@
 
 Todos los cambios relevantes del proyecto Bienestar Animal Zipaquirá se registran en este archivo.
 
+## [0.5.0-beta] - Gestión avanzada y continuidad clínica
+
+### Añadido
+- Compatibilidad de lectura para casos heredados con estados, prioridades y campos antiguos.
+- `schemaVersion = 2` para nuevos casos y normalización progresiva al operar casos legados.
+- Gestión administrativa con expediente detallado, búsqueda y filtros.
+- Actualización acotada de prioridad institucional.
+- Reasignación de casos mientras permanezcan en estado `assigned`.
+- Historial clínico longitudinal en `cases/{caseId}/attentions/{attentionId}`.
+- Recuperación de la ficha clínica anterior como registro legado cuando no existe historial longitudinal.
+- Centro de notificaciones Firestore para Ciudadano y Veterinario.
+- Avisos por asignación, reasignación, inicio de atención y finalización.
+- Asistente de prioridad IA Beta basado en reglas explicables.
+- Razón, puntaje y versión del asistente almacenados con el caso.
+- Filtros de Veterinario por texto y estado.
+- Filtros de Administrador por texto, estado, prioridad y tipo.
+- Contratos automáticos para compatibilidad, gestión Admin, historial, notificaciones e IA Beta.
+
+### Seguridad
+- Admin solo puede modificar campos autorizados de asignación, reasignación o prioridad.
+- Veterinario conserva escritura limitada a sus casos asignados y atención en curso.
+- Las entradas del historial clínico son append-only desde el cliente.
+- Las notificaciones solo pueden leerse por su destinatario y marcarse como leídas.
+- La IA Beta no modifica automáticamente la prioridad final.
+
+### Cambiado
+- `versionCode` pasa de 6 a 7.
+- `versionName` pasa de `0.4.2-beta` a `0.5.0-beta`.
+
+### Pendiente
+- Push del sistema operativo con FCM/Cloud Functions.
+- Evidencias multimedia con Firebase Storage.
+- Backend real de adopciones.
+- Gestión de cuentas institucionales desde backend privilegiado.
+
+---
+
 ## [0.4.2-beta] - Asignación operativa desde Administrador
 
 ### Añadido
