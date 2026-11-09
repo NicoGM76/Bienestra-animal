@@ -276,6 +276,7 @@ class WebAppInterface(
                 is CaseOutcome.Saved -> Unit
                 is CaseOutcome.Updated -> Unit
                 is CaseOutcome.Listed -> Unit
+                is CaseOutcome.HistoryListed -> Unit
             }
         }
     }
