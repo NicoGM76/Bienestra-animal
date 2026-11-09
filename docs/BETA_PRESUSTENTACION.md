@@ -1,8 +1,8 @@
-# Beta 0.4.2 — Guía de pre-sustentación
+# Beta 0.5.0 — Guía de pre-sustentación
 
 ## Qué demuestra esta Beta
 
-La misma APK reconoce tres tipos de cuenta desde Firebase:
+La misma APK reconoce tres tipos de cuenta desde Firebase y añade gestión operativa avanzada sin cambiar el núcleo de autenticación:
 
 1. Ciudadano.
 2. Veterinario.
@@ -123,7 +123,41 @@ Resultado esperado: el administrador puede realizar únicamente la asignación o
 12. Abrir nuevamente la ficha para mostrarla en modo consulta.
 13. Cerrar sesión.
 
-Resultado esperado: el flujo queda conectado de extremo a extremo: Ciudadano reporta -> Administrador asigna -> Veterinario atiende y finaliza.
+Resultado esperado: el flujo queda conectado de extremo a extremo: Ciudadano reporta -> Administrador revisa prioridad y asigna -> Veterinario atiende, registra historial y finaliza -> Ciudadano recibe notificación dentro de la app.
+
+---
+
+## Funciones 0.5.0 que conviene mostrar
+
+### Compatibilidad de casos antiguos
+- Los casos heredados no necesitan edición manual para visualizarse.
+- La app normaliza estados/prioridades conocidos y usa valores alternativos para ubicación/condición.
+- En la interfaz se identifican como registros legados.
+
+### Gestión Administrador
+- Buscar por texto.
+- Filtrar por estado, prioridad y tipo.
+- Abrir expediente.
+- Ver sugerencia de IA Beta y su explicación.
+- Definir prioridad institucional.
+- Reasignar solo antes de iniciar atención.
+
+### Historial Veterinario
+- Cada guardado genera una atención nueva.
+- La última ficha sigue visible en el caso para compatibilidad.
+- Una ficha anterior sin subcolección se recupera como registro clínico legado.
+
+### Notificaciones
+- Veterinario recibe asignaciones/reasignaciones.
+- Ciudadano recibe inicio y finalización del caso.
+- Las notificaciones persisten y pueden marcarse como leídas.
+- No presentar todavía FCM push como implementado; esta Beta usa bandeja interna en Firestore.
+
+### IA Beta
+- Es un asistente heurístico explicable.
+- Sugiere prioridad a partir de tipo, condición, cantidad y palabras de riesgo.
+- Admin puede usar o ignorar la sugerencia.
+- Nunca cambia por sí sola la prioridad final.
 
 ---
 
@@ -165,4 +199,9 @@ La configuración declara `minSdk 23`, pero la compatibilidad completa con dispo
 - [ ] Flujo veterinario `assigned -> in_progress -> completed` probado.
 - [ ] Ficha clínica veterinaria guardada y recuperada desde Firestore.
 - [ ] Dashboard Admin mostrando roles y estados de casos con datos reales.
+- [ ] Filtros y expediente Admin probados.
+- [ ] Prioridad institucional probada.
+- [ ] Historial clínico con al menos dos entradas probado.
+- [ ] Notificación de asignación y finalización probada.
+- [ ] IA Beta visible en un caso nuevo.
 - [ ] APK Beta generado después de las pruebas.
