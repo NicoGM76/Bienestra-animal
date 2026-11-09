@@ -40,6 +40,8 @@
   const saveCaseButton = document.getElementById('saveCase');
   const caseMessage = document.getElementById('caseMessage');
   const caseList = document.getElementById('caseList');
+  const citizenCaseSearch = document.getElementById('citizenCaseSearch');
+  const citizenStatusFilter = document.getElementById('citizenStatusFilter');
   const logoutButton = document.getElementById('logoutButton');
   const vetLogoutButton = document.getElementById('vetLogoutButton');
   const adminLogoutButton = document.getElementById('adminLogoutButton');
@@ -96,6 +98,7 @@
   const protectedIdentityNotice = document.getElementById('protectedIdentityNotice');
   let lastAuthAction = 'login';
   let currentReportType = 'lost';
+  let currentCitizenCases = [];
   let currentVetCases = [];
   let currentVetCaseId = '';
   let currentAdminCases = [];
@@ -109,6 +112,7 @@
 
   const clearSessionData = () => {
     currentRole = '';
+    currentCitizenCases = [];
     currentVetCases = [];
     currentVetCaseId = '';
     currentAdminCases = [];
@@ -276,17 +280,30 @@
   const priorityLabel = (priority) => ({ low: 'Baja', medium: 'Media', high: 'Alta', critical: 'Crítica', pending_review: 'Pendiente de revisión' }[priority] || priority || 'Pendiente');
   const statusLabel = (status) => ({ received: 'Recibido', under_review: 'En revisión', assigned: 'Asignado', in_progress: 'En atención', completed: 'Realizado' }[status] || status || 'Recibido');
 
-  const renderCaseList = (cases) => {
+  const renderCaseList = (cases, preserveSource = false) => {
     if (!caseList) return;
-    while (caseList.firstChild) caseList.removeChild(caseList.firstChild);
+    if (!preserveSource) currentCitizenCases = Array.isArray(cases) ? cases : [];
 
-    if (!Array.isArray(cases) || cases.length === 0) {
+    const query = (citizenCaseSearch ? citizenCaseSearch.value : '').trim().toLowerCase();
+    const statusFilter = citizenStatusFilter ? citizenStatusFilter.value : '';
+    const visibleCases = currentCitizenCases.filter(item => {
+      const haystack = [typeLabel(item.type), item.neighborhoodOrVillage, item.finalPriority]
+        .filter(Boolean).join(' ').toLowerCase();
+      return (!query || haystack.includes(query))
+        && (!statusFilter || item.status === statusFilter);
+    });
+
+    clearNode(caseList);
+
+    if (visibleCases.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       const title = document.createElement('strong');
-      title.textContent = 'Aún no has enviado reportes';
+      title.textContent = currentCitizenCases.length ? 'No hay reportes con estos filtros' : 'Aún no has enviado reportes';
       const detail = document.createElement('span');
-      detail.textContent = 'Cuando envíes uno podrás consultar aquí su estado general.';
+      detail.textContent = currentCitizenCases.length
+        ? 'Prueba con otra búsqueda o estado.'
+        : 'Cuando envíes uno podrás consultar aquí su estado general.';
       empty.append(title, detail);
       caseList.appendChild(empty);
       return;
@@ -294,7 +311,7 @@
 
     const grid = document.createElement('div');
     grid.className = 'case-grid';
-    cases.forEach(item => {
+    visibleCases.forEach(item => {
       const card = document.createElement('article');
       card.className = 'case-card';
 
@@ -1212,6 +1229,13 @@
         Android.updateAssignedCaseStatus(vetAction.dataset.vetCaseId, vetAction.dataset.vetNextStatus);
       }
       return;
+    }
+  });
+
+  [citizenCaseSearch, citizenStatusFilter].forEach(control => {
+    if (control) control.addEventListener('input', () => renderCaseList(currentCitizenCases, true));
+    if (control && control.tagName === 'SELECT') {
+      control.addEventListener('change', () => renderCaseList(currentCitizenCases, true));
     }
   });
 
