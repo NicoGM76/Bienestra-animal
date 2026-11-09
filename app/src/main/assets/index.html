@@ -115,6 +115,16 @@
         <button class="btn secondary block" data-go="register">＋ Agregar otro animal</button>
 
         <h2>MIS REPORTES</h2>
+        <div class="filter-bar">
+          <input id="citizenCaseSearch" type="search" placeholder="Buscar por tipo o ubicación" />
+          <select id="citizenStatusFilter">
+            <option value="">Todos los estados</option>
+            <option value="received">Recibidos</option>
+            <option value="assigned">Asignados</option>
+            <option value="in_progress">En atención</option>
+            <option value="completed">Finalizados</option>
+          </select>
+        </div>
         <div id="caseList" aria-live="polite">
           <div class="empty-state">
             <strong>Cargando tus reportes…</strong>
