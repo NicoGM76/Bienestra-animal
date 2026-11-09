@@ -20,10 +20,19 @@ data class AdminCaseSummary(
     val type: String,
     val status: String,
     val finalPriority: String,
+    val description: String,
+    val animalCount: Int,
+    val municipality: String,
     val neighborhoodOrVillage: String,
+    val addressOrLocation: String,
+    val referencePoint: String,
     val animalCondition: String,
     val assignedToUid: String,
     val assignedToName: String,
+    val aiSuggestedPriority: String,
+    val aiPriorityReason: String,
+    val aiModelVersion: String,
+    val legacy: Boolean,
 )
 
 sealed class AdminOutcome {
@@ -48,6 +57,12 @@ sealed class AdminOutcome {
         val caseId: String,
         val veterinarianUid: String,
         val veterinarianName: String,
+    ) : AdminOutcome()
+
+    data class CaseChanged(
+        val caseId: String,
+        val action: String,
+        val veterinarianName: String = "",
     ) : AdminOutcome()
 
     data class Error(val message: String) : AdminOutcome()
