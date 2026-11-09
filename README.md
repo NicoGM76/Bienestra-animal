@@ -1,4 +1,4 @@
-# Bienestar Animal Zipaquirá — Beta 0.4.2
+# Bienestar Animal Zipaquirá — Beta 0.5.0
 
 Aplicación Android híbrida para la gestión y bienestar animal del municipio de Zipaquirá, con enfoque prioritario en zonas rurales.
 
@@ -9,7 +9,7 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 - **Firebase Authentication** para identidad.
 - **Cloud Firestore** para perfiles, animales y casos.
 - Variante de prueba: `demoDebug` con paquete `com.bienestaranimal.zipaquira.demo`.
-- `versionCode = 6` y `versionName = 0.4.2-beta`.
+- `versionCode = 7` y `versionName = 0.5.0-beta`.
 - El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
 - La aplicación **no usa GPS**. La ubicación se registra manualmente mediante municipio, barrio/vereda/sector, finca/predio/dirección y punto de referencia.
 
@@ -26,6 +26,7 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 
 ### Veterinario
 - Inicio de sesión con cuenta institucional.
+- Búsqueda y filtro por estado dentro de sus casos asignados.
 - Portal propio.
 - Consulta de casos asignados a su UID.
 - Cambio controlado de estado:
@@ -37,7 +38,10 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
   - observaciones;
   - tratamiento o conducta;
   - recomendaciones y seguimiento.
+- Cada guardado clínico crea una entrada longitudinal en `cases/{caseId}/attentions/{attentionId}`.
+- Los casos antiguos con ficha clínica previa se muestran como registro clínico legado.
 - La ficha queda asociada al caso en Firestore y solo puede editarla el veterinario asignado mientras el caso está `in_progress`.
+- Recibe notificaciones dentro de la app cuando se le asigna o reasigna un caso.
 - No recibe en la interfaz la identidad del ciudadano denunciante.
 
 ### Administrador
@@ -47,6 +51,11 @@ Aplicación Android híbrida para la gestión y bienestar animal del municipio d
 - Indicadores de cuentas por rol: ciudadanos, veterinarios y administradores.
 - Seguimiento de casos por estado: recibidos, asignados, en atención y finalizados.
 - Asignación de casos en estado `received` a veterinarios activos desde la app.
+- Reasignación controlada mientras el caso siga en `assigned`.
+- Gestión de prioridad institucional antes del cierre.
+- Expediente detallado por caso.
+- Búsqueda y filtros por texto, estado, prioridad y tipo.
+- Asistente de prioridad IA Beta, explicable y no vinculante: propone, pero el administrador decide.
 - La asignación registra profesional, rol, administrador responsable, fecha y cambia el caso a `assigned`.
 - Actividad institucional con cuentas, animales y casos recientes.
 - Identificación del profesional asignado a cada caso cuando existe.
@@ -63,9 +72,20 @@ El rol no lo decide JavaScript. Después de autenticar, Kotlin consulta `users/{
 Firestore Rules aplica los permisos reales:
 - ciudadano: sus animales y sus casos;
 - veterinario: únicamente casos cuyo `assignedTo` sea su UID;
-- administrador: lectura institucional y asignación acotada de casos recibidos a veterinarios activos;
+- administrador: lectura institucional, prioridad y asignación/reasignación acotada de casos;
 - eliminación bloqueada;
 - edición de roles desde el cliente bloqueada.
+
+## Compatibilidad de datos
+
+- Los lectores de casos normalizan estados y prioridades antiguas.
+- Se admiten campos heredados de ubicación y condición cuando faltan los nombres actuales.
+- Los casos previos se identifican como registros legados sin exigir edición manual en Firestore.
+- Los nuevos casos se guardan con `schemaVersion = 2`.
+
+## Notificaciones
+
+La Beta 0.5.0 incorpora un centro de notificaciones persistente en Firestore para Ciudadano y Veterinario. Se generan avisos por asignación, inicio de atención y cierre. El envío push del sistema operativo mediante FCM/Cloud Functions queda como una mejora de transporte posterior; no se presenta todavía como implementado.
 
 ## Estado de compatibilidad
 
