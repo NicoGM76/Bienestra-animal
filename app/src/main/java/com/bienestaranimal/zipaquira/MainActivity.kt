@@ -1,8 +1,11 @@
 package com.bienestaranimal.zipaquira
 
 import android.annotation.SuppressLint
+import android.Manifest
 import android.os.Bundle
+import android.os.Build
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -16,6 +19,7 @@ import com.bienestaranimal.zipaquira.animals.FirebaseAnimalGateway
 import com.bienestaranimal.zipaquira.cases.FirebaseCaseGateway
 import com.bienestaranimal.zipaquira.evidence.FirebaseEvidenceGateway
 import com.bienestaranimal.zipaquira.notifications.FirebaseNotificationGateway
+import com.bienestaranimal.zipaquira.push.FirebasePushRegistrationGateway
 import com.bienestaranimal.zipaquira.web.AppNavigationPolicy
 import com.bienestaranimal.zipaquira.web.AppWebViewClient
 import com.bienestaranimal.zipaquira.web.WebViewEventSink
@@ -27,6 +31,9 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var eventSink: WebViewEventSink
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     private val evidencePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -85,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         val adminGateway = FirebaseAdminGateway()
         val notificationGateway = FirebaseNotificationGateway()
         val evidenceGateway = FirebaseEvidenceGateway()
+        val pushRegistrationGateway = FirebasePushRegistrationGateway()
         eventSink = WebViewEventSink(webView)
         webView.addJavascriptInterface(
             WebAppInterface(
@@ -95,12 +103,22 @@ class MainActivity : AppCompatActivity() {
                 adminGateway = adminGateway,
                 notificationGateway = notificationGateway,
                 evidenceGateway = evidenceGateway,
+                pushRegistrationGateway = pushRegistrationGateway,
                 eventSink = eventSink,
                 openEvidencePicker = { evidencePicker.launch(arrayOf("image/*")) },
             ),
             "Android",
         )
         webView.loadUrl(AppNavigationPolicy.ROOT_URL)
+
+        if (
+            Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        pushRegistrationGateway.registerCurrentDevice()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
