@@ -61,6 +61,32 @@ class WebAppInterface(
     }
 
     @JavascriptInterface
+    fun restoreSession() {
+        authGateway.restoreSession { outcome ->
+            when (outcome) {
+                is AuthOutcome.Success -> {
+                    pushRegistrationGateway.registerCurrentDevice()
+                    eventSink.emit(
+                        "auth:restored",
+                        JSONObject()
+                            .put("uid", outcome.uid)
+                            .put("email", outcome.email)
+                            .put("name", outcome.name)
+                            .put("activeRole", outcome.activeRole)
+                            .put("roles", JSONArray(outcome.roles))
+                            .toString(),
+                    )
+                }
+                is AuthOutcome.NoSession -> eventSink.emit("auth:no-session", "{}")
+                is AuthOutcome.Error -> eventSink.emit(
+                    "auth:restore-error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+            }
+        }
+    }
+
+    @JavascriptInterface
     fun login(email: String, password: String) {
         val validationError = AuthInputValidator.validateLogin(email, password)
         if (validationError != null) {
@@ -85,6 +111,7 @@ class WebAppInterface(
                     )
                 }
                 is AuthOutcome.Error -> emitError(outcome.message)
+                is AuthOutcome.NoSession -> Unit
             }
         }
     }
@@ -114,6 +141,7 @@ class WebAppInterface(
                     )
                 }
                 is AuthOutcome.Error -> emitError(outcome.message)
+                is AuthOutcome.NoSession -> Unit
             }
         }
     }
