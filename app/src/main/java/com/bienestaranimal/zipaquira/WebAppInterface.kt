@@ -625,6 +625,18 @@ class WebAppInterface(
             )
         }
 
+        val audits = JSONArray()
+        outcome.audits.forEach { item ->
+            audits.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("caseId", item.caseId)
+                    .put("action", item.action)
+                    .put("actorUid", item.actorUid)
+                    .put("createdAtMillis", item.createdAtMillis),
+            )
+        }
+
         eventSink.emit(
             "admin:dashboard",
             JSONObject()
@@ -642,6 +654,7 @@ class WebAppInterface(
                 .put("users", users)
                 .put("animals", animals)
                 .put("cases", cases)
+                .put("audits", audits)
                 .toString(),
         )
     }
