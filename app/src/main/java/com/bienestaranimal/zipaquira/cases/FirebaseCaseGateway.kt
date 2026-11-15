@@ -372,6 +372,9 @@ class FirebaseCaseGateway(
             veterinaryObservations = document.getString("veterinaryObservations").orEmpty(),
             veterinaryTreatment = document.getString("veterinaryTreatment").orEmpty(),
             veterinaryRecommendations = document.getString("veterinaryRecommendations").orEmpty(),
+            evidenceUrls = (document.get("evidenceUrls") as? List<*>)
+                ?.mapNotNull { it as? String }
+                .orEmpty(),
         )
 
     private fun toClinicalRecord(document: DocumentSnapshot): ClinicalRecordSummary =
