@@ -3,6 +3,7 @@ package com.bienestaranimal.zipaquira
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -22,6 +23,8 @@ import com.bienestaranimal.zipaquira.cases.CaseInputValidator
 import com.bienestaranimal.zipaquira.cases.CaseOutcome
 import com.bienestaranimal.zipaquira.notifications.NotificationGateway
 import com.bienestaranimal.zipaquira.notifications.NotificationOutcome
+import com.bienestaranimal.zipaquira.evidence.EvidenceGateway
+import com.bienestaranimal.zipaquira.evidence.EvidenceOutcome
 import com.bienestaranimal.zipaquira.web.BridgeMessagePolicy
 import com.bienestaranimal.zipaquira.web.WebEventSink
 import org.json.JSONArray
@@ -38,7 +41,9 @@ class WebAppInterface(
     private val caseGateway: CaseGateway,
     private val adminGateway: AdminGateway,
     private val notificationGateway: NotificationGateway,
+    private val evidenceGateway: EvidenceGateway,
     private val eventSink: WebEventSink,
+    private val openEvidencePicker: () -> Unit,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -466,6 +471,42 @@ class WebAppInterface(
                     JSONObject().put("message", outcome.message).toString(),
                 )
                 is NotificationOutcome.Listed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun pickEvidenceImage() {
+        mainHandler.post { openEvidencePicker() }
+    }
+
+    @JavascriptInterface
+    fun uploadCaseEvidence(caseId: String, uriString: String) {
+        val uri = try {
+            Uri.parse(uriString)
+        } catch (_: Exception) {
+            eventSink.emit(
+                "evidence:error",
+                JSONObject().put("message", "La fotografía seleccionada no es válida.").toString(),
+            )
+            return
+        }
+
+        eventSink.emit("evidence:uploading", JSONObject().put("caseId", caseId).toString())
+        evidenceGateway.uploadCaseImage(caseId, uri) { outcome ->
+            when (outcome) {
+                is EvidenceOutcome.Uploaded -> eventSink.emit(
+                    "evidence:uploaded",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("storagePath", outcome.storagePath)
+                        .put("downloadUrl", outcome.downloadUrl)
+                        .toString(),
+                )
+                is EvidenceOutcome.Error -> eventSink.emit(
+                    "evidence:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
             }
         }
     }
