@@ -229,6 +229,10 @@
         </div>
 
         <div class="info-box"><span>🩺</span><p id="vetCareDescription">La descripción reportada aparecerá aquí. Esta vista no expone la identidad protegida del ciudadano.</p></div>
+        <h2>EVIDENCIAS DEL REPORTE</h2>
+        <div id="vetCaseEvidence" class="evidence-gallery">
+          <div class="empty-state"><strong>Sin evidencia fotográfica</strong><span>Las imágenes aportadas por el ciudadano aparecerán aquí.</span></div>
+        </div>
 
         <label for="vetDiagnosis">Diagnóstico o impresión clínica</label>
         <textarea id="vetDiagnosis" rows="3" placeholder="Ej. Herida superficial con signos de inflamación"></textarea>
@@ -362,6 +366,10 @@
         <div id="adminLegacyNotice" class="info-box" hidden><span>🧩</span><p>Registro legado detectado. La aplicación está usando valores compatibles para campos que no existían en versiones anteriores.</p></div>
         <div class="info-box"><span>📍</span><p id="adminCaseLocation">Ubicación del caso.</p></div>
         <div class="info-box"><span>📋</span><p id="adminCaseDescription">Descripción del caso.</p></div>
+        <h2>EVIDENCIAS DEL REPORTE</h2>
+        <div id="adminCaseEvidence" class="evidence-gallery">
+          <div class="empty-state"><strong>Sin evidencia fotográfica</strong><span>Las imágenes adjuntas al reporte aparecerán aquí.</span></div>
+        </div>
 
         <h2>ASISTENTE DE PRIORIDAD · IA BETA</h2>
         <div id="adminAiBox" class="ai-card">
@@ -528,7 +536,11 @@
           <span>🔒</span><p><strong>Identidad protegida.</strong> En reportes sensibles tu identidad no se muestra al presunto responsable ni a otros ciudadanos.</p>
         </div>
 
-        <div class="info-box"><span>📎</span><p>Fotos, video y audio son evidencia valiosa, pero se integrarán con Firebase Storage en el siguiente módulo. No son obligatorios para esta demo.</p></div>
+        <div class="evidence-picker-card">
+          <div><span>📷</span><div><strong>Evidencia fotográfica</strong><p>Adjunta una imagen al reporte. Máximo 8 MB.</p></div></div>
+          <button id="pickEvidenceButton" class="btn secondary block">Seleccionar fotografía</button>
+          <p id="evidenceSelectionStatus" class="form-message">Sin fotografía seleccionada.</p>
+        </div>
         <button id="saveCase" class="btn primary block">Enviar reporte</button>
         <p id="caseMessage" class="form-message" role="status" aria-live="polite"></p>
         <button class="btn ghost block" data-go="home">Cancelar</button>
