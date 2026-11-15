@@ -88,6 +88,10 @@ service cloud.firestore {
       // Los roles institucionales se administran fuera del cliente.
       allow update: if false;
       allow delete: if false;
+
+      match /devices/{deviceId} {
+        allow read, create, update, delete: if ownsUserDocument(uid);
+      }
     }
 
     match /animals/{animalId} {
@@ -334,6 +338,11 @@ service cloud.firestore {
     }
 
     // Denegación por defecto para toda colección aún no implementada.
+    match /auditLogs/{logId} {
+      allow read: if isAdministrator();
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
