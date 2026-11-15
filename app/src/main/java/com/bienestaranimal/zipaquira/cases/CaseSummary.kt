@@ -19,4 +19,5 @@ data class CaseSummary(
     val veterinaryObservations: String,
     val veterinaryTreatment: String,
     val veterinaryRecommendations: String,
+    val evidenceUrls: List<String>,
 )
