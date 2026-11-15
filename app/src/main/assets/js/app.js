@@ -962,6 +962,17 @@
       return role || 'Sin rol';
     };
 
+    const auditActionLabel = action => ({
+      case_created: 'Caso creado',
+      case_assigned_or_reassigned: 'Asignación / reasignación',
+      priority_updated: 'Prioridad actualizada',
+      status_updated: 'Estado actualizado',
+      evidence_added: 'Evidencia agregada',
+      clinical_snapshot_updated: 'Ficha clínica actualizada',
+      case_updated: 'Caso actualizado',
+      case_deleted: 'Caso eliminado'
+    }[action] || action || 'Actividad');
+
     const sections = [
       {
         title: 'Cuentas recientes',
@@ -982,6 +993,15 @@
           item.neighborhoodOrVillage,
           item.animalCondition,
           item.assignedToName
+        ].filter(Boolean).join(' · ')
+      },
+      {
+        title: 'Auditoría reciente',
+        items: data.audits || [],
+        describe: item => [
+          auditActionLabel(item.action),
+          item.caseId ? `Caso ${item.caseId.slice(0, 8)}` : '',
+          item.createdAtMillis ? new Date(item.createdAtMillis).toLocaleString('es-CO') : ''
         ].filter(Boolean).join(' · ')
       }
     ];
