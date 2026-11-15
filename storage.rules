@@ -1,9 +1,39 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function caseData(caseId) {
+      return firestore.get(/databases/(default)/documents/cases/$(caseId)).data;
+    }
+
+    function userData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function canReadCaseEvidence(caseId) {
+      return signedIn() && (
+        caseData(caseId).createdBy == request.auth.uid
+        || caseData(caseId).assignedTo == request.auth.uid
+        || (
+          userData().status == "active"
+          && userData().activeRole == "administrator"
+          && userData().roles.hasAny(["administrator"])
+        )
+      );
+    }
+
+    function ownsCase(caseId) {
+      return signedIn()
+        && caseData(caseId).createdBy == request.auth.uid;
+    }
+
     match /caseEvidence/{caseId}/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read: if canReadCaseEvidence(caseId);
+
+      allow write: if ownsCase(caseId)
                    && request.resource != null
                    && request.resource.size < 8 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
