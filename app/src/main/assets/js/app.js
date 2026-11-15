@@ -30,6 +30,63 @@
     }
   };
 
+  const getConnectivityStatus = () => {
+    if (window.Android && typeof window.Android.getConnectivityStatus === 'function') {
+      try {
+        return Android.getConnectivityStatus() === 'online' ? 'online' : 'offline';
+      } catch (_) {
+        return 'offline';
+      }
+    }
+    return navigator.onLine ? 'online' : 'offline';
+  };
+
+  const refreshConnectivityBanners = () => {
+    const online = getConnectivityStatus() === 'online';
+    document.querySelectorAll('.online-banner').forEach(banner => {
+      banner.classList.toggle('offline', !online);
+      const label = banner.querySelector('span');
+      if (label) {
+        const roleSuffix = banner.textContent.includes('veterinario')
+          ? ' · Acceso veterinario'
+          : (banner.textContent.includes('administrador') ? ' · Acceso administrador' : '');
+        label.textContent = online
+          ? `En línea${roleSuffix} · Sincronización activa`
+          : `Sin conexión${roleSuffix} · Modo offline`;
+      }
+    });
+    return online;
+  };
+
+  const setCitizenSegment = (name) => {
+    document.querySelectorAll('[data-citizen-segment]').forEach(button => {
+      button.classList.toggle('active', button.dataset.citizenSegment === name);
+    });
+    document.querySelectorAll('[data-segment-panel]').forEach(panel => {
+      const active = panel.dataset.segmentPanel === name;
+      panel.classList.toggle('active', active);
+      panel.hidden = !active;
+    });
+  };
+
+  const adoptionStorageKey = 'baz-adoption-requests-v1';
+  const getAdoptionRequests = () => {
+    try {
+      return JSON.parse(localStorage.getItem(adoptionStorageKey) || '[]');
+    } catch (_) {
+      return [];
+    }
+  };
+
+  const renderAdoptionRequests = () => {
+    const requested = new Set(getAdoptionRequests());
+    document.querySelectorAll('[data-adoption-request]').forEach(button => {
+      const active = requested.has(button.dataset.adoptionRequest);
+      button.disabled = active;
+      button.textContent = active ? 'Solicitud registrada' : 'Solicitar adopción';
+    });
+  };
+
   const loginButton = document.getElementById('loginButton');
   const signupButton = document.getElementById('signupButton');
   const authMessage = document.getElementById('authMessage');
@@ -96,6 +153,7 @@
   const reportHeader = document.getElementById('reportHeader');
   const reportLead = document.getElementById('reportLead');
   const protectedIdentityNotice = document.getElementById('protectedIdentityNotice');
+  const adoptionMessage = document.getElementById('adoptionMessage');
   let lastAuthAction = 'login';
   let currentReportType = 'lost';
   let currentCitizenCases = [];
@@ -1006,8 +1064,14 @@
 
       if (eventName === 'animals:loading') {
         if (data.action === 'save') {
-          setAnimalBusy(true);
-          setMessage(animalMessage, 'Guardando el animal…');
+          const online = refreshConnectivityBanners();
+          setAnimalBusy(online);
+          setMessage(
+            animalMessage,
+            online
+              ? 'Guardando el animal…'
+              : 'Sin conexión: el registro queda pendiente en la caché local y se sincronizará automáticamente.'
+          );
         }
         return;
       }
@@ -1036,8 +1100,14 @@
 
       if (eventName === 'cases:loading') {
         if (data.action === 'save') {
-          setCaseBusy(true);
-          setMessage(caseMessage, 'Enviando el reporte…');
+          const online = refreshConnectivityBanners();
+          setCaseBusy(online);
+          setMessage(
+            caseMessage,
+            online
+              ? 'Enviando el reporte…'
+              : 'Sin conexión: el reporte queda pendiente y Firestore lo sincronizará al recuperar Internet.'
+          );
         }
         return;
       }
@@ -1161,6 +1231,28 @@
   };
 
   document.addEventListener('click', (event) => {
+    const segment = event.target.closest('[data-citizen-segment]');
+    if (segment) {
+      event.preventDefault();
+      setCitizenSegment(segment.dataset.citizenSegment || 'services');
+      return;
+    }
+
+    const adoptionRequest = event.target.closest('[data-adoption-request]');
+    if (adoptionRequest) {
+      event.preventDefault();
+      const id = adoptionRequest.dataset.adoptionRequest || '';
+      const current = getAdoptionRequests();
+      if (id && !current.includes(id)) {
+        current.push(id);
+        localStorage.setItem(adoptionStorageKey, JSON.stringify(current));
+      }
+      renderAdoptionRequests();
+      setMessage(adoptionMessage, 'Solicitud simulada registrada en este dispositivo.', 'success');
+      toast('Solicitud de adopción registrada.');
+      return;
+    }
+
     const nav = event.target.closest('[data-go]');
     if (nav) {
       event.preventDefault();
@@ -1439,4 +1531,10 @@
   const rawInitial = location.hash.replace('#', '') || 'splash';
   const initial = canOpenScreen(rawInitial) ? rawInitial : 'login';
   screens.forEach(s => s.classList.toggle('active', s.dataset.screen === initial));
+  setCitizenSegment('services');
+  renderAdoptionRequests();
+  refreshConnectivityBanners();
+  window.addEventListener('online', refreshConnectivityBanners);
+  window.addEventListener('offline', refreshConnectivityBanners);
+  window.setInterval(refreshConnectivityBanners, 5000);
 })();
