@@ -34,8 +34,11 @@
 - [ ] Login/logout probado en los tres roles.
 - [ ] Registro y edición de animal probados.
 - [ ] Reporte online probado.
-- [ ] Reporte con pérdida temporal de conexión probado.
-- [ ] Sincronización posterior probada.
+- [ ] Reporte creado sin conexión con sesión previamente autenticada.
+- [ ] Cerrar completamente la app con la escritura aún pendiente.
+- [ ] Reabrir la app todavía sin conexión y comprobar restauración de sesión/caché.
+- [ ] Simular ventana operativa offline prolongada (requisito: hasta 8 h) sin perder datos locales.
+- [ ] Recuperar Internet y comprobar sincronización posterior sin duplicados.
 - [ ] Foto de evidencia subida y visible en Admin/Vet.
 - [ ] Asignación/reasignación probada.
 - [ ] IA Beta + prioridad final probadas.
@@ -74,3 +77,17 @@
 - [ ] Conclusiones.
 - [ ] Referencias.
 - [ ] Figuras/capturas finales.
+
+
+## Criterio de aceptación offline de 8 horas
+
+La prueba no exige mantener una pantalla activa durante ocho horas. Se considera válida cuando:
+
+1. La cuenta inició sesión previamente con conexión.
+2. El perfil y los datos de trabajo relevantes quedaron cacheados.
+3. Se crea o modifica un registro compatible durante la desconexión.
+4. La aplicación puede cerrarse y abrirse sin perder la operación local pendiente.
+5. Al recuperar Internet, Firestore sincroniza la escritura una sola vez.
+6. El dato sincronizado aparece en Firestore y en el rol correspondiente.
+
+Las fotografías de Firebase Storage requieren red para subir el archivo. El reporte puede persistir primero en Firestore y la evidencia debe reintentarse al recuperar conectividad si la carga no llegó a completarse.
