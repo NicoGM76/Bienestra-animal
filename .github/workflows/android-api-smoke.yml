@@ -1,5 +1,9 @@
 name: Android API Smoke Matrix
 
+concurrency:
+  group: android-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
