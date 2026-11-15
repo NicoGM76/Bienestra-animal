@@ -104,12 +104,20 @@ exports.auditCaseWrite = onDocumentWritten(
     }
 
     const source = after || before || {};
-    const actorUid =
-      source.priorityReviewedBy ||
-      source.veterinaryUpdatedBy ||
-      source.assignedBy ||
-      source.createdBy ||
-      "system";
+    let actorUid = "system";
+    if (action === "priority_updated") {
+      actorUid = source.priorityReviewedBy || "system";
+    } else if (action === "case_assigned_or_reassigned") {
+      actorUid = source.assignedBy || "system";
+    } else if (action === "status_updated") {
+      actorUid = source.assignedTo || "system";
+    } else if (action === "evidence_added") {
+      actorUid = source.createdBy || "system";
+    } else if (action === "clinical_snapshot_updated") {
+      actorUid = source.veterinaryUpdatedBy || source.assignedTo || "system";
+    } else {
+      actorUid = source.createdBy || "system";
+    }
 
     await db.collection("auditLogs").add({
       caseId,
