@@ -12,8 +12,8 @@ android {
         applicationId = "com.bienestaranimal.zipaquira"
         minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.5.0-beta"
+        versionCode = 10
+        versionName = "1.0.0-rc1"
     }
 
     buildFeatures {
@@ -57,6 +57,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.webkit:webkit:1.15.0")
