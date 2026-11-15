@@ -18,10 +18,14 @@ class WebViewHardeningTest(unittest.TestCase):
         path = ROOT / 'app/src/main/java/com/bienestaranimal/zipaquira/web/AppWebViewClient.kt'
         self.assertTrue(path.exists(), 'AppWebViewClient.kt is missing')
         source = path.read_text(encoding='utf-8')
+        policy = (ROOT / 'app/src/main/java/com/bienestaranimal/zipaquira/web/AppNavigationPolicy.kt').read_text(encoding='utf-8')
         self.assertIn('assetLoader.shouldInterceptRequest', source)
-        self.assertIn('AppNavigationPolicy.isTrusted', source)
+        self.assertIn('if (!AppNavigationPolicy.isTrustedResource(request.url.toString()))', source)
+        self.assertIn('return !AppNavigationPolicy.isTrusted(request.url.toString())', source)
         self.assertIn('blockedResponse()', source)
-        self.assertIn('if (!AppNavigationPolicy.isTrusted(request.url.toString()))', source)
+        self.assertIn('host == "firebasestorage.googleapis.com"', policy)
+        self.assertIn('host == "storage.googleapis.com"', policy)
+        self.assertNotIn('return true', policy)
 
 if __name__ == '__main__':
     unittest.main()
