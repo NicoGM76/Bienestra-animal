@@ -25,7 +25,9 @@ class WebViewHardeningTest(unittest.TestCase):
         self.assertIn('blockedResponse()', source)
         self.assertIn('host == "firebasestorage.googleapis.com"', policy)
         self.assertIn('host == "storage.googleapis.com"', policy)
-        self.assertNotIn('return true', policy)
+        self.assertIn('if (isTrusted(url)) return true', policy)
+        self.assertNotIn('http://', policy)
+        self.assertNotIn('*.googleapis.com', policy)
 
 if __name__ == '__main__':
     unittest.main()
