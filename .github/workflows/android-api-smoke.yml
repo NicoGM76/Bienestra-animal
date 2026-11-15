@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - final/1.0
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
