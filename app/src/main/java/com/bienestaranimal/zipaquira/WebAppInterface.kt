@@ -25,6 +25,7 @@ import com.bienestaranimal.zipaquira.notifications.NotificationGateway
 import com.bienestaranimal.zipaquira.notifications.NotificationOutcome
 import com.bienestaranimal.zipaquira.evidence.EvidenceGateway
 import com.bienestaranimal.zipaquira.evidence.EvidenceOutcome
+import com.bienestaranimal.zipaquira.push.FirebasePushRegistrationGateway
 import com.bienestaranimal.zipaquira.web.BridgeMessagePolicy
 import com.bienestaranimal.zipaquira.web.WebEventSink
 import org.json.JSONArray
@@ -42,6 +43,7 @@ class WebAppInterface(
     private val adminGateway: AdminGateway,
     private val notificationGateway: NotificationGateway,
     private val evidenceGateway: EvidenceGateway,
+    private val pushRegistrationGateway: FirebasePushRegistrationGateway,
     private val eventSink: WebEventSink,
     private val openEvidencePicker: () -> Unit,
 ) {
@@ -69,7 +71,9 @@ class WebAppInterface(
         eventSink.emit("auth:loading", JSONObject().put("action", "login").toString())
         authGateway.signIn(email, password) { outcome ->
             when (outcome) {
-                is AuthOutcome.Success -> eventSink.emit(
+                is AuthOutcome.Success -> {
+                    pushRegistrationGateway.registerCurrentDevice()
+                    eventSink.emit(
                     "auth:success",
                     JSONObject()
                         .put("uid", outcome.uid)
@@ -78,7 +82,8 @@ class WebAppInterface(
                         .put("activeRole", outcome.activeRole)
                         .put("roles", JSONArray(outcome.roles))
                         .toString(),
-                )
+                    )
+                }
                 is AuthOutcome.Error -> emitError(outcome.message)
             }
         }
@@ -95,7 +100,9 @@ class WebAppInterface(
         eventSink.emit("auth:loading", JSONObject().put("action", "register").toString())
         authGateway.registerCitizen(name, email, password) { outcome ->
             when (outcome) {
-                is AuthOutcome.Success -> eventSink.emit(
+                is AuthOutcome.Success -> {
+                    pushRegistrationGateway.registerCurrentDevice()
+                    eventSink.emit(
                     "auth:registered",
                     JSONObject()
                         .put("uid", outcome.uid)
@@ -104,7 +111,8 @@ class WebAppInterface(
                         .put("activeRole", outcome.activeRole)
                         .put("roles", JSONArray(outcome.roles))
                         .toString(),
-                )
+                    )
+                }
                 is AuthOutcome.Error -> emitError(outcome.message)
             }
         }
