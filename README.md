@@ -1,115 +1,112 @@
-# Bienestar Animal Zipaquirá — Beta 0.5.0
+# Bienestar Animal Zipaquirá — Versión 1.0 RC
 
-Aplicación Android híbrida para la gestión y bienestar animal del municipio de Zipaquirá, con enfoque prioritario en zonas rurales.
+Aplicación Android híbrida para la gestión y seguimiento de bienestar animal en Zipaquirá, con prioridad en zonas rurales y diversidad de especies.
 
-## Tecnología actual
+## Estado
 
-- Android en **Kotlin**.
-- Interfaz **HTML + CSS + JavaScript** dentro de WebView.
-- **Firebase Authentication** para identidad.
-- **Cloud Firestore** para perfiles, animales y casos.
-- Variante de prueba: `demoDebug` con paquete `com.bienestaranimal.zipaquira.demo`.
-- `versionCode = 7` y `versionName = 0.5.0-beta`.
-- El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
-- La aplicación **no usa GPS**. La ubicación se registra manualmente mediante municipio, barrio/vereda/sector, finca/predio/dirección y punto de referencia.
+- Rama de cierre: `final/1.0`.
+- Versión Android: `1.0.0-rc1`.
+- APK de pre-sustentación: se conserva separado y no se modifica.
+- La rama 1.0 se valida mediante GitHub Actions antes de integrarla a `main`.
 
-## Funciones reales disponibles
+## Arquitectura
+
+- Android + Kotlin.
+- Interfaz HTML/CSS/JavaScript dentro de WebView endurecida.
+- Firebase Authentication.
+- Cloud Firestore.
+- Firebase Storage para evidencia fotográfica.
+- Firebase Cloud Messaging para push.
+- Cloud Functions para envío privilegiado de push y auditoría.
+- Firestore persistent cache para operación offline y sincronización posterior.
+
+## Roles
 
 ### Ciudadano
-- Registro de cuenta ciudadana.
-- Inicio y cierre de sesión.
-- Perfil real en `users/{uid}`.
-- Registro y consulta de animales.
+- Registro e inicio de sesión.
+- Tablero segmentado con tarjetas.
+- Registro y edición segura de animales.
+- Diversidad de especies: perro, gato, conejo, ave, caballo, bovino, cerdo, cabra y otros.
 - Reportes de pérdida, hallazgo y presunto maltrato.
-- Consulta del estado de reportes.
-- Identidad protegida en reportes de presunto maltrato.
-
-### Veterinario
-- Inicio de sesión con cuenta institucional.
-- Búsqueda y filtro por estado dentro de sus casos asignados.
-- Portal propio.
-- Consulta de casos asignados a su UID.
-- Cambio controlado de estado:
-  - `assigned -> in_progress`
-  - `in_progress -> completed`
-- Resumen de carga: asignados, en atención y finalizados.
-- Ficha de atención clínica por caso en curso:
-  - diagnóstico o impresión clínica;
-  - observaciones;
-  - tratamiento o conducta;
-  - recomendaciones y seguimiento.
-- Cada guardado clínico crea una entrada longitudinal en `cases/{caseId}/attentions/{attentionId}`.
-- Los casos antiguos con ficha clínica previa se muestran como registro clínico legado.
-- La ficha queda asociada al caso en Firestore y solo puede editarla el veterinario asignado mientras el caso está `in_progress`.
-- Recibe notificaciones dentro de la app cuando se le asigna o reasigna un caso.
-- No recibe en la interfaz la identidad del ciudadano denunciante.
+- Ubicación manual urbana/rural.
+- Evidencia fotográfica por reporte.
+- Seguimiento de casos.
+- Notificaciones internas.
+- Adopciones simuladas con solicitud local para demostración.
+- Operación con caché offline después de una sesión válida.
 
 ### Administrador
-- Inicio de sesión con cuenta institucional.
-- Portal propio de supervisión.
-- Conteo real de usuarios, animales y casos.
-- Indicadores de cuentas por rol: ciudadanos, veterinarios y administradores.
-- Seguimiento de casos por estado: recibidos, asignados, en atención y finalizados.
-- Asignación de casos en estado `received` a veterinarios activos desde la app.
-- Reasignación controlada mientras el caso siga en `assigned`.
-- Gestión de prioridad institucional antes del cierre.
-- Expediente detallado por caso.
-- Búsqueda y filtros por texto, estado, prioridad y tipo.
-- Asistente de prioridad IA Beta, explicable y no vinculante: propone, pero el administrador decide.
-- La asignación registra profesional, rol, administrador responsable, fecha y cambia el caso a `assigned`.
-- Actividad institucional con cuentas, animales y casos recientes.
-- Identificación del profesional asignado a cada caso cuando existe.
-- El resto de la información institucional permanece en modo de consulta.
+- Tablero institucional.
+- Métricas de usuarios, animales y casos.
+- Búsqueda y filtros.
+- Expediente por caso.
+- Prioridad institucional.
+- IA Beta explicable y no vinculante.
+- Asignación y reasignación controlada.
+- Evidencias fotográficas del reporte.
+- Actividad y auditoría reciente.
 
-## Seguridad de roles
+### Veterinario
+- Casos asignados.
+- Filtros y resumen de carga.
+- Inicio y cierre controlado de atención.
+- Evidencias fotográficas del reporte.
+- Ficha clínica.
+- Historial clínico longitudinal por caso.
+- Notificaciones internas y push.
 
-El rol no lo decide JavaScript. Después de autenticar, Kotlin consulta `users/{uid}` en Firestore y valida:
-- `status = active`;
-- `activeRole`;
-- que `activeRole` pertenezca a `roles`;
-- que el rol esté habilitado en esta Beta.
+## Offline
 
-Firestore Rules aplica los permisos reales:
-- ciudadano: sus animales y sus casos;
-- veterinario: únicamente casos cuyo `assignedTo` sea su UID;
-- administrador: lectura institucional, prioridad y asignación/reasignación acotada de casos;
-- eliminación bloqueada;
-- edición de roles desde el cliente bloqueada.
+Firestore se inicializa con persistencia local y caché sin límite explícito. La app detecta el estado de conectividad desde Android y muestra modo online/offline. Las escrituras compatibles con Firestore pueden quedar pendientes y sincronizarse al recuperar Internet.
 
-## Compatibilidad de datos
+Consideración: el inicio de sesión inicial y la carga de contenido nunca consultado requieren conexión. El modo offline está pensado para una cuenta con sesión previa y datos ya disponibles en caché.
 
-- Los lectores de casos normalizan estados y prioridades antiguas.
-- Se admiten campos heredados de ubicación y condición cuando faltan los nombres actuales.
-- Los casos previos se identifican como registros legados sin exigir edición manual en Firestore.
-- Los nuevos casos se guardan con `schemaVersion = 2`.
+## Evidencias
+
+El ciudadano puede seleccionar una fotografía desde Android. La imagen se sube a:
+
+`caseEvidence/{caseId}/{evidenceId}`
+
+El caso guarda `evidenceUrls`, `evidenceStoragePaths` y marcas de actualización. Admin y Veterinario pueden visualizar las imágenes desde el expediente.
 
 ## Notificaciones
 
-La Beta 0.5.0 incorpora un centro de notificaciones persistente en Firestore para Ciudadano y Veterinario. Se generan avisos por asignación, inicio de atención y cierre. El envío push del sistema operativo mediante FCM/Cloud Functions queda como una mejora de transporte posterior; no se presenta todavía como implementado.
+La bandeja interna sigue siendo la fuente funcional principal. Cuando se despliegan las Cloud Functions, cada documento nuevo en `notifications` también dispara un push FCM hacia los dispositivos registrados del destinatario.
 
-## Estado de compatibilidad
+Los tokens se almacenan en:
 
-La configuración declara `minSdk 23`. El funcionamiento moderno ya fue probado. La compatibilidad completa con Android antiguo continúa como incidencia conocida y no se presenta como resuelta.
+`users/{uid}/devices/{deviceId}`
 
-## Antes de probar la Beta
+## Auditoría
 
-1. Ejecutar `git pull` en la rama `beta/roles-institucionales`.
-2. Abrir Android Studio y sincronizar Gradle.
-3. Publicar el contenido actualizado de `firestore.rules`.
-4. Crear manualmente en Firebase las cuentas institucionales de prueba siguiendo `docs/BETA_PRESUSTENTACION.md`.
-5. Seleccionar `demoDebug`.
-6. Probar primero los flujos ciudadanos ya existentes.
-7. Probar Veterinario.
-8. Probar Administrador.
+La Cloud Function `auditCaseWrite` genera documentos en `auditLogs` ante cambios relevantes del caso. El administrador puede consultar las acciones recientes desde su tablero.
 
-## Funciones que no forman parte de esta Beta
+## Adopciones
 
-- Creación de cuentas institucionales desde la app.
-- Coordinador y funcionario de campo.
-- Backend real de adopciones.
-- Evidencias multimedia.
-- Offline con Room/WorkManager.
-- IA de priorización.
-- Notificaciones push.
+El módulo de adopciones se mantiene deliberadamente como simulación funcional para la presentación 1.0. Las solicitudes se guardan localmente en el dispositivo y se identifican claramente como simuladas. No se presenta como backend productivo.
+
+## Compatibilidad
+
+Configuración Android:
+
+- `minSdk = 23`
+- `compileSdk = 35`
+- `targetSdk = 35`
+
+El repositorio incluye una matriz de smoke tests para API 26, 33 y 35. La entrega solo debe afirmar compatibilidad en las APIs que terminen con prueba exitosa.
+
+## Despliegue Firebase antes del APK final
+
+1. Publicar `firestore.rules`.
+2. Publicar `storage.rules`.
+3. Verificar Authentication Email/Password.
+4. Desplegar Functions si se quiere demostrar push y auditoría backend:
+   `firebase deploy --only functions`
+5. Generar `demoDebug` o el build final seleccionado.
+6. Ejecutar el flujo completo de los tres roles.
+
+## Flujo final recomendado
+
+Ciudadano reporta y adjunta foto → Admin revisa IA/prioridad y asigna → Veterinario consulta evidencia, atiende y registra ficha → ciudadano recibe actualización → auditoría conserva el cambio.
 
 Equipo: Jorge Luis Osorio Silva y Nicolás García Mejía.
