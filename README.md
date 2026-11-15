@@ -16,9 +16,9 @@ Aplicación Android híbrida para la gestión y seguimiento de bienestar animal 
 - Interfaz HTML/CSS/JavaScript dentro de WebView endurecida.
 - Firebase Authentication.
 - Cloud Firestore.
-- Firebase Storage para evidencia fotográfica.
-- Firebase Cloud Messaging para push.
-- Cloud Functions para envío privilegiado de push y auditoría.
+- Firebase Authentication + Cloud Firestore como núcleo desplegado en plan Spark.
+- Notificaciones internas en Firestore con proyección a notificación local Android.
+- Firebase Storage, FCM remoto y Cloud Functions quedan como ampliaciones preparadas, no activas en la versión académica gratuita.
 - Firestore persistent cache para operación offline y sincronización posterior.
 
 ## Roles
@@ -30,7 +30,7 @@ Aplicación Android híbrida para la gestión y seguimiento de bienestar animal 
 - Diversidad de especies: perro, gato, conejo, ave, caballo, bovino, cerdo, cabra y otros.
 - Reportes de pérdida, hallazgo y presunto maltrato.
 - Ubicación manual urbana/rural.
-- Evidencia fotográfica por reporte.
+- Evidencia fotográfica: interfaz preparada, no activa en el build académico gratuito.
 - Seguimiento de casos.
 - Notificaciones internas.
 - Adopciones simuladas con solicitud local para demostración.
@@ -44,17 +44,17 @@ Aplicación Android híbrida para la gestión y seguimiento de bienestar animal 
 - Prioridad institucional.
 - IA Beta explicable y no vinculante.
 - Asignación y reasignación controlada.
-- Evidencias fotográficas del reporte.
-- Actividad y auditoría reciente.
+- Evidencia multimedia reservada para infraestructura ampliada.
+- Actividad reciente disponible cuando exista fuente de auditoría desplegada.
 
 ### Veterinario
 - Casos asignados.
 - Filtros y resumen de carga.
 - Inicio y cierre controlado de atención.
-- Evidencias fotográficas del reporte.
+- Evidencia multimedia reservada para infraestructura ampliada.
 - Ficha clínica.
 - Historial clínico longitudinal por caso.
-- Notificaciones internas y push.
+- Notificaciones internas y notificaciones locales Android al consultar avisos nuevos.
 
 ## Offline
 
@@ -64,25 +64,21 @@ Consideración: el inicio de sesión inicial y la carga de contenido nunca consu
 
 ## Evidencias
 
-El ciudadano puede seleccionar una fotografía desde Android. La imagen se sube a:
-
-`caseEvidence/{caseId}/{evidenceId}`
-
-El caso guarda `evidenceUrls`, `evidenceStoragePaths` y marcas de actualización. Admin y Veterinario pueden visualizar las imágenes desde el expediente.
+La versión académica gratuita no activa Firebase Storage porque el proyecto se mantiene en Spark y no vincula facturación. El flujo principal de reportes funciona sin archivos adjuntos. La arquitectura de evidencia multimedia queda preparada para una futura infraestructura ampliada.
 
 ## Notificaciones
 
-La bandeja interna sigue siendo la fuente funcional principal. Cuando se despliegan las Cloud Functions, cada documento nuevo en `notifications` también dispara un push FCM hacia los dispositivos registrados del destinatario.
 
-Los tokens se almacenan en:
+La bandeja interna en Firestore es la fuente funcional principal. Cuando la app consulta avisos nuevos no leídos, Android los refleja mediante una notificación local en el canal `case_updates`. Esto permite demostrar avisos del sistema sin Cloud Functions ni Blaze.
 
-`users/{uid}/devices/{deviceId}`
+El código de FCM y registro de dispositivos se conserva como ampliación futura, pero no se presenta como push remoto activo en la versión académica gratuita.
 
 ## Auditoría
 
-La Cloud Function `auditCaseWrite` genera documentos en `auditLogs` ante cambios relevantes del caso. El administrador puede consultar las acciones recientes desde su tablero.
+La auditoría automática basada en Cloud Functions queda preparada pero no desplegada en Spark. No se presenta como funcionalidad backend activa en la versión académica gratuita.
 
 ## Adopciones
+
 
 El módulo de adopciones se mantiene deliberadamente como simulación funcional para la presentación 1.0. Las solicitudes se guardan localmente en el dispositivo y se identifican claramente como simuladas. No se presenta como backend productivo.
 
@@ -99,14 +95,14 @@ El repositorio incluye una matriz de smoke tests para API 26, 33 y 35. La entreg
 ## Despliegue Firebase antes del APK final
 
 1. Publicar `firestore.rules`.
-2. Publicar `storage.rules`.
-3. Verificar Authentication Email/Password.
-4. Desplegar Functions si se quiere demostrar push y auditoría backend:
-   `firebase deploy --only functions`
+2. Verificar Authentication Email/Password.
+3. Mantener el proyecto en plan Spark sin facturación.
+4. No desplegar Storage ni Functions en la versión académica gratuita.
 5. Generar `demoDebug` o el build final seleccionado.
-6. Ejecutar el flujo completo de los tres roles.
+6. Ejecutar el flujo completo de los tres roles y la prueba offline.
 
 ## Flujo final recomendado
+
 
 Ciudadano reporta y adjunta foto → Admin revisa IA/prioridad y asigna → Veterinario consulta evidencia, atiende y registra ficha → ciudadano recibe actualización → auditoría conserva el cambio.
 
