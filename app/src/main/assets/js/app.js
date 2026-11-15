@@ -1176,6 +1176,22 @@
         return;
       }
 
+      if (eventName === 'auth:restored') {
+        setAuthBusy(false);
+        openPortalForRole(data);
+        refreshConnectivityBanners();
+        return;
+      }
+
+      if (eventName === 'auth:no-session') {
+        return;
+      }
+
+      if (eventName === 'auth:restore-error') {
+        setMessage(authMessage, data.message || 'No fue posible restaurar la sesión.', 'error');
+        return;
+      }
+
       if (eventName === 'auth:success' || eventName === 'auth:registered') {
         setAuthBusy(false);
         setMessage(authMessage, '');
@@ -1755,6 +1771,9 @@
   setCitizenSegment('services');
   renderAdoptionRequests();
   refreshConnectivityBanners();
+  if (window.Android && typeof window.Android.restoreSession === 'function') {
+    Android.restoreSession();
+  }
   window.addEventListener('online', refreshConnectivityBanners);
   window.addEventListener('offline', refreshConnectivityBanners);
   window.setInterval(refreshConnectivityBanners, 5000);
