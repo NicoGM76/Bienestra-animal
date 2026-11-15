@@ -39,6 +39,35 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
+      - name: Create ephemeral Firebase config for CI
+        shell: bash
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "123456789012",
+              "project_id": "bienestar-animal-ci",
+              "storage_bucket": "bienestar-animal-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789012:android:0123456789abcdef",
+                  "android_client_info": {
+                    "package_name": "com.bienestaranimal.zipaquira.demo"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyCIPlaceholderKey000000000000000000"
+                  }
+                ]
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
       - name: Run smoke test
         uses: reactivecircus/android-emulator-runner@v2
         with:
