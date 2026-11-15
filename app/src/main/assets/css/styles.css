@@ -519,3 +519,65 @@ input:disabled {
   .dashboard-card-grid { grid-template-columns:1fr; }
   .dashboard-card.adoption-card-home { grid-column:auto; }
 }
+
+
+/* Version 1.0 evidence workflow */
+.evidence-picker-card {
+  margin:18px 0;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:linear-gradient(145deg, var(--surface), var(--surface-alt));
+  box-shadow:var(--shadow);
+}
+.evidence-picker-card > div {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+.evidence-picker-card > div > span { font-size:28px; }
+.evidence-picker-card strong { display:block; color:var(--primary); }
+.evidence-picker-card p { margin:4px 0 0; color:var(--muted); line-height:1.4; }
+.evidence-gallery {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:8px 0 18px;
+}
+.evidence-photo {
+  margin:0;
+  overflow:hidden;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.evidence-photo img {
+  display:block;
+  width:100%;
+  aspect-ratio:4/3;
+  object-fit:cover;
+  background:var(--surface-alt);
+}
+.evidence-photo figcaption {
+  padding:8px 10px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+}
+.evidence-count {
+  display:inline-flex !important;
+  width:max-content;
+  margin-top:8px !important;
+  padding:5px 8px;
+  border-radius:999px;
+  background:var(--surface-alt);
+  color:var(--primary) !important;
+  font-size:12px;
+  font-weight:700;
+}
+.animal-card .btn.compact { margin-top:10px; }
+
+@media (max-width:420px) {
+  .evidence-gallery { grid-template-columns:1fr; }
+}
