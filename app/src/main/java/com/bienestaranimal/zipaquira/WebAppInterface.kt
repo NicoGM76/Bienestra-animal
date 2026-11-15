@@ -152,6 +152,51 @@ class WebAppInterface(
                 )
                 is AnimalOutcome.Error -> emitAnimalError(outcome.message)
                 is AnimalOutcome.Listed -> emitAnimalList(outcome)
+                is AnimalOutcome.Updated -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun updateAnimal(animalId: String, payloadJson: String) {
+        val draft = try {
+            val payload = JSONObject(payloadJson)
+            AnimalDraft(
+                name = payload.optString("name"),
+                species = payload.optString("species"),
+                breed = payload.optString("breed"),
+                color = payload.optString("color"),
+                sex = payload.optString("sex", "No determinado"),
+                approximateAge = payload.optString("approximateAge"),
+                size = payload.optString("size", "Mediano"),
+                sterilized = payload.optBoolean("sterilized", false),
+                addressType = payload.optString("addressType"),
+                municipality = payload.optString("municipality", "Zipaquirá"),
+                neighborhoodOrVillage = payload.optString("neighborhoodOrVillage"),
+                addressOrLocation = payload.optString("addressOrLocation"),
+                referencePoint = payload.optString("referencePoint"),
+            )
+        } catch (_: Exception) {
+            emitAnimalError("No fue posible leer los datos del animal.")
+            return
+        }
+
+        val validationError = AnimalInputValidator.validate(draft)
+        if (validationError != null) {
+            emitAnimalError(validationError)
+            return
+        }
+
+        eventSink.emit("animals:loading", JSONObject().put("action", "update").toString())
+        animalGateway.updateAnimal(animalId, draft) { outcome ->
+            when (outcome) {
+                is AnimalOutcome.Updated -> eventSink.emit(
+                    "animals:updated",
+                    JSONObject().put("animalId", outcome.animalId).toString(),
+                )
+                is AnimalOutcome.Error -> emitAnimalError(outcome.message)
+                is AnimalOutcome.Saved -> Unit
+                is AnimalOutcome.Listed -> emitAnimalList(outcome)
             }
         }
     }
@@ -164,6 +209,7 @@ class WebAppInterface(
                 is AnimalOutcome.Listed -> emitAnimalList(outcome)
                 is AnimalOutcome.Error -> emitAnimalError(outcome.message)
                 is AnimalOutcome.Saved -> Unit
+                is AnimalOutcome.Updated -> Unit
             }
         }
     }
@@ -448,6 +494,16 @@ class WebAppInterface(
                     .put("name", animal.name)
                     .put("species", animal.species)
                     .put("breed", animal.breed)
+                    .put("color", animal.color)
+                    .put("sex", animal.sex)
+                    .put("approximateAge", animal.approximateAge)
+                    .put("size", animal.size)
+                    .put("sterilized", animal.sterilized)
+                    .put("addressType", animal.addressType)
+                    .put("municipality", animal.municipality)
+                    .put("neighborhoodOrVillage", animal.neighborhoodOrVillage)
+                    .put("addressOrLocation", animal.addressOrLocation)
+                    .put("referencePoint", animal.referencePoint)
                     .put("status", animal.status),
             )
         }
