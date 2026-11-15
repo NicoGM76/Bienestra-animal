@@ -16,7 +16,7 @@ class AppWebViewClient(
         view: WebView?,
         request: WebResourceRequest
     ): WebResourceResponse? {
-        if (!AppNavigationPolicy.isTrusted(request.url.toString())) {
+        if (!AppNavigationPolicy.isTrustedResource(request.url.toString())) {
             return blockedResponse()
         }
         return assetLoader.shouldInterceptRequest(request.url)
@@ -24,7 +24,7 @@ class AppWebViewClient(
 
     @Deprecated("Deprecated in Android SDK; retained for API 23 compatibility")
     override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
-        if (url == null || !AppNavigationPolicy.isTrusted(url)) {
+        if (url == null || !AppNavigationPolicy.isTrustedResource(url)) {
             return blockedResponse()
         }
         return assetLoader.shouldInterceptRequest(Uri.parse(url))
