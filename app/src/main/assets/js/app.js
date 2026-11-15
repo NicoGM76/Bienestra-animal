@@ -154,8 +154,14 @@
   const reportLead = document.getElementById('reportLead');
   const protectedIdentityNotice = document.getElementById('protectedIdentityNotice');
   const adoptionMessage = document.getElementById('adoptionMessage');
+  const pickEvidenceButton = document.getElementById('pickEvidenceButton');
+  const evidenceSelectionStatus = document.getElementById('evidenceSelectionStatus');
+  const vetCaseEvidence = document.getElementById('vetCaseEvidence');
+  const adminCaseEvidence = document.getElementById('adminCaseEvidence');
   let lastAuthAction = 'login';
   let currentReportType = 'lost';
+  let selectedEvidenceUri = '';
+  let pendingEvidenceCaseId = '';
   let currentCitizenCases = [];
   let currentCitizenAnimals = [];
   let currentEditingAnimalId = '';
@@ -172,6 +178,8 @@
 
   const clearSessionData = () => {
     currentRole = '';
+    selectedEvidenceUri = '';
+    pendingEvidenceCaseId = '';
     currentCitizenCases = [];
     currentCitizenAnimals = [];
     currentEditingAnimalId = '';
@@ -342,6 +350,36 @@
   const priorityLabel = (priority) => ({ low: 'Baja', medium: 'Media', high: 'Alta', critical: 'Crítica', pending_review: 'Pendiente de revisión' }[priority] || priority || 'Pendiente');
   const statusLabel = (status) => ({ received: 'Recibido', under_review: 'En revisión', assigned: 'Asignado', in_progress: 'En atención', completed: 'Realizado' }[status] || status || 'Recibido');
 
+  const renderEvidenceGallery = (container, urls) => {
+    if (!container) return;
+    clearNode(container);
+    const list = Array.isArray(urls) ? urls.filter(Boolean) : [];
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      const title = document.createElement('strong');
+      title.textContent = 'Sin evidencia fotográfica';
+      const detail = document.createElement('span');
+      detail.textContent = 'Las imágenes aportadas por el ciudadano aparecerán aquí.';
+      empty.append(title, detail);
+      container.appendChild(empty);
+      return;
+    }
+
+    list.forEach((url, index) => {
+      const figure = document.createElement('figure');
+      figure.className = 'evidence-photo';
+      const image = document.createElement('img');
+      image.src = url;
+      image.alt = `Evidencia fotográfica ${index + 1}`;
+      image.loading = 'lazy';
+      const caption = document.createElement('figcaption');
+      caption.textContent = `Evidencia ${index + 1}`;
+      figure.append(image, caption);
+      container.appendChild(figure);
+    });
+  };
+
   const renderCaseList = (cases, preserveSource = false) => {
     if (!caseList) return;
     if (!preserveSource) currentCitizenCases = Array.isArray(cases) ? cases : [];
@@ -390,7 +428,15 @@
       location.textContent = item.neighborhoodOrVillage || 'Zipaquirá';
       const status = document.createElement('b');
       status.textContent = `Estado: ${statusLabel(item.status)}`;
-      card.append(top, location, status);
+      const evidenceCount = Array.isArray(item.evidenceUrls) ? item.evidenceUrls.length : 0;
+      if (evidenceCount) {
+        const evidence = document.createElement('span');
+        evidence.className = 'evidence-count';
+        evidence.textContent = `📷 ${evidenceCount} evidencia(s)`;
+        card.append(top, location, status, evidence);
+      } else {
+        card.append(top, location, status);
+      }
       grid.appendChild(card);
     });
     caseList.appendChild(grid);
@@ -535,6 +581,7 @@
         .join(' · ') || 'Zipaquirá';
     }
     if (vetCareDescription) vetCareDescription.textContent = item.description || 'Sin descripción adicional.';
+    renderEvidenceGallery(vetCaseEvidence, item.evidenceUrls || []);
 
     if (vetDiagnosis) vetDiagnosis.value = item.veterinaryDiagnosis || '';
     if (vetObservations) vetObservations.value = item.veterinaryObservations || '';
@@ -766,6 +813,7 @@
       ].filter(Boolean).join(' ');
     }
     if (adminLegacyNotice) adminLegacyNotice.hidden = !item.legacy;
+    renderEvidenceGallery(adminCaseEvidence, item.evidenceUrls || []);
 
     const aiAvailable = item.aiSuggestedPriority && item.aiSuggestedPriority !== 'pending_review';
     if (adminAiPriority) {
@@ -972,6 +1020,9 @@
     const priority = document.getElementById('reportPriority');
     const condition = document.getElementById('reportAnimalCondition');
     const known = document.getElementById('reportResponsibleKnown');
+    selectedEvidenceUri = '';
+    pendingEvidenceCaseId = '';
+    if (evidenceSelectionStatus) setMessage(evidenceSelectionStatus, 'Sin fotografía seleccionada.');
     if (count) count.value = '1';
     if (priority) priority.value = 'system';
     if (condition) condition.value = '';
@@ -1189,10 +1240,71 @@
 
       if (eventName === 'cases:saved') {
         setCaseBusy(false);
+        pendingEvidenceCaseId = data.caseId || '';
+        if (
+          selectedEvidenceUri &&
+          pendingEvidenceCaseId &&
+          window.Android &&
+          typeof window.Android.uploadCaseEvidence === 'function'
+        ) {
+          setMessage(caseMessage, 'Reporte recibido. Subiendo evidencia fotográfica…', 'success');
+          Android.uploadCaseEvidence(pendingEvidenceCaseId, selectedEvidenceUri);
+          return;
+        }
+
         setMessage(caseMessage, 'Reporte recibido correctamente.', 'success');
         toast('Reporte recibido correctamente.');
+        selectedEvidenceUri = '';
+        pendingEvidenceCaseId = '';
         resetCaseForm();
         go('home');
+        setCitizenSegment('cases');
+        requestMyCases();
+        return;
+      }
+
+      if (eventName === 'evidence:selected') {
+        selectedEvidenceUri = data.uri || '';
+        if (evidenceSelectionStatus) {
+          setMessage(
+            evidenceSelectionStatus,
+            selectedEvidenceUri ? 'Fotografía seleccionada y lista para adjuntar.' : 'Sin fotografía seleccionada.',
+            selectedEvidenceUri ? 'success' : ''
+          );
+        }
+        return;
+      }
+
+      if (eventName === 'evidence:uploading') {
+        setMessage(caseMessage, 'Subiendo evidencia a Firebase Storage…');
+        return;
+      }
+
+      if (eventName === 'evidence:uploaded') {
+        toast('Evidencia fotográfica guardada.');
+        setMessage(caseMessage, 'Reporte y evidencia guardados correctamente.', 'success');
+        selectedEvidenceUri = '';
+        pendingEvidenceCaseId = '';
+        if (evidenceSelectionStatus) setMessage(evidenceSelectionStatus, 'Sin fotografía seleccionada.');
+        resetCaseForm();
+        go('home');
+        setCitizenSegment('cases');
+        requestMyCases();
+        return;
+      }
+
+      if (eventName === 'evidence:error') {
+        toast(data.message || 'El reporte quedó guardado, pero la fotografía no pudo subirse.');
+        setMessage(
+          caseMessage,
+          data.message || 'El reporte quedó guardado, pero la fotografía no pudo subirse.',
+          'error'
+        );
+        selectedEvidenceUri = '';
+        pendingEvidenceCaseId = '';
+        resetCaseForm();
+        go('home');
+        setCitizenSegment('cases');
         requestMyCases();
         return;
       }
@@ -1476,6 +1588,15 @@
     saveVetCareButton.disabled = true;
     setMessage(vetCareMessage, 'Guardando ficha clínica…');
     Android.saveVeterinaryCare(currentVetCaseId, diagnosis, observations, treatment, recommendations);
+  });
+
+  if (pickEvidenceButton) pickEvidenceButton.addEventListener('click', () => {
+    setMessage(evidenceSelectionStatus, '');
+    if (!window.Android || typeof window.Android.pickEvidenceImage !== 'function') {
+      setMessage(evidenceSelectionStatus, 'La selección de fotografías requiere ejecutar la app Android.', 'error');
+      return;
+    }
+    Android.pickEvidenceImage();
   });
 
   if (loginButton) loginButton.addEventListener('click', () => {
