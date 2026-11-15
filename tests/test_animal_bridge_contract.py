@@ -19,10 +19,22 @@ class AnimalBridgeContractTest(unittest.TestCase):
         self.assertIn('"animals:error"', bridge)
         self.assertIn("FirebaseAnimalGateway()", main)
         self.assertIn("FirebaseNotificationGateway()", main)
-        self.assertIn(
-            "WebAppInterface(this, authGateway, animalGateway, caseGateway, adminGateway, notificationGateway, eventSink)",
-            main,
-        )
+        self.assertIn("WebAppInterface(", main)
+        for dependency in [
+            "context = this",
+            "authGateway = authGateway",
+            "animalGateway = animalGateway",
+            "caseGateway = caseGateway",
+            "adminGateway = adminGateway",
+            "notificationGateway = notificationGateway",
+            "evidenceGateway = evidenceGateway",
+            "pushRegistrationGateway = pushRegistrationGateway",
+            "eventSink = eventSink",
+            "openEvidencePicker =",
+        ]:
+            self.assertIn(dependency, main)
+        self.assertIn("fun updateAnimal(animalId: String, payloadJson: String)", bridge)
+        self.assertIn('"animals:updated"', bridge)
 
 
 if __name__ == "__main__":
