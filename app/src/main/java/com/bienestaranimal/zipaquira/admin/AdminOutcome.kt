@@ -33,6 +33,7 @@ data class AdminCaseSummary(
     val aiPriorityReason: String,
     val aiModelVersion: String,
     val legacy: Boolean,
+    val evidenceUrls: List<String>,
 )
 
 sealed class AdminOutcome {
