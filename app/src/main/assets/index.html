@@ -88,60 +88,84 @@
       </div>
     </section>
 
-    <section class="screen" data-screen="home" aria-label="Portal ciudadano">
-      <div class="online-banner">☁ <span>En línea</span></div>
+    <section class="screen" data-screen="home" aria-label="Tablero ciudadano">
+      <div class="online-banner" data-connectivity-banner>☁ <span>En línea · Datos sincronizados</span></div>
       <div class="page-content roomy">
-        <div class="user-row">
-          <div><h1>Portal ciudadano</h1><p class="lead compact" id="signedInUser">Sesión autenticada.</p></div>
-          <div class="avatar">BA</div>
-        </div>
-
-        <h2>TRÁMITES Y SERVICIOS</h2>
-        <div class="action-list">
-          <button class="action-card" data-go="register"><span class="action-icon">♧</span><span>Registrar Animal</span><b>›</b></button>
-          <button class="action-card report-action" data-report-type="lost"><span class="action-icon">⌕</span><span>Reportar Pérdida</span><b>›</b></button>
-          <button class="action-card report-action" data-report-type="found"><span class="action-icon">✋</span><span>Reportar Hallazgo</span><b>›</b></button>
-          <button class="action-card report-action" data-report-type="abuse"><span class="action-icon">◇</span><span>Reportar Presunto Maltrato</span><b>›</b></button>
-          <button class="action-card" data-go="adoptions"><span class="action-icon">♡</span><span>Consultar Adopciones</span><b>›</b></button>
-        </div>
-
-        <h2>MIS ANIMALES REGISTRADOS</h2>
-        <div id="animalList" aria-live="polite">
-          <div class="empty-state">
-            <strong>Cargando tus animales…</strong>
-            <span>Consultando los registros asociados a tu cuenta.</span>
+        <div class="user-row role-heading">
+          <div>
+            <span class="eyebrow">TABLERO DE CONTROL</span>
+            <h1>Portal ciudadano</h1>
+            <p class="lead compact" id="signedInUser">Sesión autenticada.</p>
           </div>
+          <div class="avatar">CI</div>
         </div>
-        <button class="btn secondary block" data-go="register">＋ Agregar otro animal</button>
+        <img class="role-app-icon" src="img/logo_baz.png" alt="Bienestar Animal Zipaquirá" />
 
-        <h2>MIS REPORTES</h2>
-        <div class="filter-bar">
-          <input id="citizenCaseSearch" type="search" placeholder="Buscar por tipo o ubicación" />
-          <select id="citizenStatusFilter">
-            <option value="">Todos los estados</option>
-            <option value="received">Recibidos</option>
-            <option value="assigned">Asignados</option>
-            <option value="in_progress">En atención</option>
-            <option value="completed">Finalizados</option>
-          </select>
+        <div class="citizen-journey" aria-label="Flujo ágil ciudadano">
+          <strong>Reporta en 3 pasos</strong>
+          <span><b>1</b> Selecciona</span>
+          <span><b>2</b> Describe</span>
+          <span><b>3</b> Envía y consulta</span>
         </div>
-        <div id="caseList" aria-live="polite">
-          <div class="empty-state">
-            <strong>Cargando tus reportes…</strong>
-            <span>Consultando los casos asociados a tu cuenta.</span>
+
+        <nav class="segment-tabs" aria-label="Secciones del portal ciudadano">
+          <button class="segment-tab active" data-citizen-segment="services">Servicios</button>
+          <button class="segment-tab" data-citizen-segment="animals">Animales</button>
+          <button class="segment-tab" data-citizen-segment="cases">Reportes</button>
+          <button class="segment-tab" data-citizen-segment="notifications">Avisos</button>
+        </nav>
+
+        <section class="segment-panel active" data-segment-panel="services">
+          <h2>ACCIONES RÁPIDAS</h2>
+          <div class="dashboard-card-grid">
+            <button class="dashboard-card species-card dog" data-go="register"><span class="dashboard-icon">🐕</span><strong>Registrar animal</strong><small>Perros, gatos, especies rurales y más.</small></button>
+            <button class="dashboard-card alert-card report-action" data-report-type="abuse"><span class="dashboard-icon">🩺</span><strong>Presunto maltrato</strong><small>Reporta una situación y sigue su atención.</small></button>
+            <button class="dashboard-card lost-card report-action" data-report-type="lost"><span class="dashboard-icon">🔎</span><strong>Reportar pérdida</strong><small>Registra ubicación y características.</small></button>
+            <button class="dashboard-card found-card report-action" data-report-type="found"><span class="dashboard-icon">🐾</span><strong>Reportar hallazgo</strong><small>Ayuda a ubicar a su responsable.</small></button>
+            <button class="dashboard-card adoption-card-home" data-go="adoptions"><span class="dashboard-icon">💚</span><strong>Adopciones</strong><small>Explora el catálogo municipal simulado.</small></button>
           </div>
-        </div>
-
-        <h2>NOTIFICACIONES</h2>
-        <div id="citizenNotificationList" class="notification-list" aria-live="polite">
-          <div class="empty-state">
-            <strong>Cargando notificaciones…</strong>
-            <span>Aquí verás novedades de los casos que reportaste.</span>
+          <div class="species-ribbon" aria-label="Especies incluidas">
+            <span>🐕 Perro</span><span>🐈 Gato</span><span>🐇 Conejo</span><span>🐦 Ave</span><span>🐎 Caballo</span><span>🐄 Bovino</span><span>🐖 Cerdo</span><span>🐐 Cabra</span>
           </div>
-        </div>
+        </section>
 
+        <section class="segment-panel" data-segment-panel="animals" hidden>
+          <div class="section-heading-row"><h2>MIS ANIMALES</h2><button class="btn compact secondary" data-go="register">＋ Registrar</button></div>
+          <div id="animalList" aria-live="polite">
+            <div class="empty-state"><strong>Cargando tus animales…</strong><span>Consultando los registros asociados a tu cuenta.</span></div>
+          </div>
+        </section>
+
+        <section class="segment-panel" data-segment-panel="cases" hidden>
+          <h2>MIS REPORTES</h2>
+          <div class="filter-bar">
+            <input id="citizenCaseSearch" type="search" placeholder="Buscar por tipo o ubicación" />
+            <select id="citizenStatusFilter">
+              <option value="">Todos los estados</option>
+              <option value="received">Recibidos</option>
+              <option value="assigned">Asignados</option>
+              <option value="in_progress">En atención</option>
+              <option value="completed">Finalizados</option>
+            </select>
+          </div>
+          <div id="caseList" aria-live="polite">
+            <div class="empty-state"><strong>Cargando tus reportes…</strong><span>Consultando los casos asociados a tu cuenta.</span></div>
+          </div>
+        </section>
+
+        <section class="segment-panel" data-segment-panel="notifications" hidden>
+          <h2>NOTIFICACIONES</h2>
+          <div id="citizenNotificationList" class="notification-list" aria-live="polite">
+            <div class="empty-state"><strong>Cargando notificaciones…</strong><span>Aquí verás novedades de los casos que reportaste.</span></div>
+          </div>
+        </section>
+
+        <div class="offline-note">
+          <span>☁</span>
+          <p><strong>Modo conectado y offline.</strong> Los datos consultados quedan en caché y las operaciones pendientes se sincronizan al recuperar Internet.</p>
+        </div>
         <button id="logoutButton" class="btn ghost block">Cerrar sesión</button>
-        <p class="progress-note">Demo funcional: autenticación, perfiles, animales y reportes usan Firebase real.</p>
+        <p class="progress-note">Bienestar Animal Zipaquirá · Versión 1.0</p>
       </div>
     </section>
 
@@ -149,10 +173,11 @@
     <section class="screen" data-screen="vet-home" aria-label="Portal veterinario">
       <div class="online-banner">☁ <span>En línea · Acceso veterinario</span></div>
       <div class="page-content roomy">
-        <div class="user-row">
-          <div><h1>Portal veterinario</h1><p class="lead compact" id="vetSignedInUser">Sesión institucional.</p></div>
+        <div class="user-row role-heading">
+          <div><span class="eyebrow">TABLERO DE CONTROL</span><h1>Portal veterinario</h1><p class="lead compact" id="vetSignedInUser">Sesión institucional.</p></div>
           <div class="avatar">VT</div>
         </div>
+        <img class="role-app-icon" src="img/logo_baz.png" alt="Bienestar Animal Zipaquirá" />
         <div class="info-box"><span>ⓘ</span><p>Consulta tus casos asignados, controla su avance y registra la atención clínica cuando el caso esté en curso.</p></div>
 
         <h2>MI CARGA DE ATENCIÓN</h2>
@@ -236,10 +261,11 @@
     <section class="screen" data-screen="admin-home" aria-label="Portal administrador">
       <div class="online-banner">☁ <span>En línea · Acceso administrador</span></div>
       <div class="page-content roomy">
-        <div class="user-row">
-          <div><h1>Portal administrador</h1><p class="lead compact" id="adminSignedInUser">Sesión institucional.</p></div>
+        <div class="user-row role-heading">
+          <div><span class="eyebrow">TABLERO DE CONTROL</span><h1>Portal administrador</h1><p class="lead compact" id="adminSignedInUser">Sesión institucional.</p></div>
           <div class="avatar">AD</div>
         </div>
+        <img class="role-app-icon" src="img/logo_baz.png" alt="Bienestar Animal Zipaquirá" />
         <div class="info-box"><span>🔒</span><p>Panel institucional de supervisión. En esta Beta el administrador puede consultar información y asignar casos recibidos a veterinarios activos.</p></div>
 
         <h2>RESUMEN GENERAL</h2>
@@ -510,18 +536,28 @@
     </section>
 
     <section class="screen" data-screen="adoptions" aria-label="Catálogo de adopciones">
-      <div class="step-header"><button data-go="home">←</button><strong>Adopciones</strong><span>Presentación</span></div>
+      <div class="step-header"><button data-go="home">←</button><strong>Adopciones</strong><span>Simulación 1.0</span></div>
       <div class="page-content">
-        <div class="demo-badge warning">CATÁLOGO DEMO</div>
+        <div class="demo-badge warning">MÓDULO SIMULADO · FLUJO INTERACTIVO</div>
         <h1>Animales en adopción</h1>
-        <p class="lead">Datos ficticios para demostración. La publicación y aprobación institucional se conectarán al backend en una fase posterior.</p>
+        <p class="lead">Catálogo demostrativo para validar el flujo ciudadano. Las solicitudes se conservan localmente en este dispositivo.</p>
         <div class="adoption-grid">
-          <article class="adoption-card"><div class="adoption-icon">🐕</div><div><strong>Canela</strong><span>Perra · 2 años · Mediana</span><em class="status ok">Disponible</em><p>Sociable, esterilizada y apta para hogar familiar.</p></div></article>
-          <article class="adoption-card"><div class="adoption-icon">🐈</div><div><strong>Nube</strong><span>Gato · 1 año · Pequeño</span><em class="status ok">Disponible</em><p>Tranquilo y acostumbrado al contacto con personas.</p></div></article>
-          <article class="adoption-card"><div class="adoption-icon">🐐</div><div><strong>Brisa</strong><span>Cabra · Joven · Rural</span><em class="status review">Revisión institucional</em><p>Ejemplo rural para mostrar el alcance inclusivo del sistema.</p></div></article>
+          <article class="adoption-card" data-adoption-id="canela">
+            <div class="adoption-icon">🐕</div>
+            <div><strong>Canela</strong><span>Perra · 2 años · Mediana</span><em class="status ok">Disponible</em><p>Sociable, esterilizada y apta para hogar familiar.</p><button class="btn secondary compact adoption-request" data-adoption-request="canela">Solicitar adopción</button></div>
+          </article>
+          <article class="adoption-card" data-adoption-id="nube">
+            <div class="adoption-icon">🐈</div>
+            <div><strong>Nube</strong><span>Gato · 1 año · Pequeño</span><em class="status ok">Disponible</em><p>Tranquilo y acostumbrado al contacto con personas.</p><button class="btn secondary compact adoption-request" data-adoption-request="nube">Solicitar adopción</button></div>
+          </article>
+          <article class="adoption-card" data-adoption-id="brisa">
+            <div class="adoption-icon">🐐</div>
+            <div><strong>Brisa</strong><span>Cabra · Joven · Rural</span><em class="status review">Revisión institucional</em><p>Ejemplo rural que representa la variedad de especies del sistema.</p><button class="btn secondary compact adoption-request" data-adoption-request="brisa">Solicitar adopción</button></div>
+          </article>
         </div>
-        <div class="info-box"><span>ⓘ</span><p>En producción, un ciudadano solicitará publicar un animal y la Alcaldía deberá aprobarlo antes de hacerlo visible.</p></div>
-        <button class="btn ghost block" data-go="home">Volver al portal</button>
+        <p id="adoptionMessage" class="form-message" role="status" aria-live="polite"></p>
+        <div class="info-box"><span>ⓘ</span><p>Este módulo es una simulación funcional de interfaz. La aprobación institucional y el backend de adopciones quedan identificados como evolución posterior.</p></div>
+        <button class="btn ghost block" data-go="home">Volver al tablero</button>
       </div>
     </section>
 
