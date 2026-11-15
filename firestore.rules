@@ -9,6 +9,30 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function hasActiveProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == "active";
+    }
+
+    function isCitizen() {
+      return hasActiveProfile()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeRole == "citizen"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(["citizen"]);
+    }
+
+    function isVeterinarian() {
+      return hasActiveProfile()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeRole == "veterinarian"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(["veterinarian"]);
+    }
+
+    function isAdministrator() {
+      return hasActiveProfile()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeRole == "administrator"
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(["administrator"]);
+    }
+
     function isCitizenProfile(data, uid) {
       return data.keys().hasAll([
         "uid",
@@ -27,50 +51,298 @@ service cloud.firestore {
       && data.status == "active";
     }
 
+    function isActiveVeterinarian(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.status == "active"
+        && get(/databases/$(database)/documents/users/$(uid)).data.activeRole == "veterinarian"
+        && get(/databases/$(database)/documents/users/$(uid)).data.roles.hasAny(["veterinarian"]);
+    }
+
+    function caseWasReceived() {
+      return !resource.data.keys().hasAny(["status"])
+        || resource.data.status in ["received", "recibido", "Recibido", "new", "nuevo"];
+    }
+
+    function caseIsCompleted() {
+      return resource.data.keys().hasAny(["status"])
+        && resource.data.status in ["completed", "realizado", "finalizado", "cerrado", "closed"];
+    }
+
+    function veterinarianStatusTransitionAllowed() {
+      return (
+          resource.data.status in ["assigned", "asignado"]
+          && request.resource.data.status == "in_progress"
+        ) || (
+          resource.data.status in ["in_progress", "en_atencion", "en atención"]
+          && request.resource.data.status == "completed"
+        );
+    }
+
     match /users/{uid} {
       allow create: if ownsUserDocument(uid)
                     && isCitizenProfile(request.resource.data, uid);
-      allow read: if ownsUserDocument(uid);
 
-      // La edición de perfiles se habilitará en un flujo específico.
-      // Mantenerla bloqueada ahora evita elevación de privilegios desde clientes.
+      allow read: if ownsUserDocument(uid)
+                  || isAdministrator();
+
+      // Los roles institucionales se administran fuera del cliente.
       allow update: if false;
       allow delete: if false;
+
+      match /devices/{deviceId} {
+        allow read, create, update, delete: if ownsUserDocument(uid);
+      }
     }
 
     match /animals/{animalId} {
-      allow create: if signedIn()
+      allow create: if isCitizen()
                     && request.resource.data.mainResponsibleId == request.auth.uid
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.status == "active"
                     && request.resource.data.origin == "citizen";
 
-      allow read: if signedIn()
-                  && resource.data.mainResponsibleId == request.auth.uid;
+      allow read: if (
+                    isCitizen()
+                    && resource.data.mainResponsibleId == request.auth.uid
+                  )
+                  || isAdministrator();
 
-      // La edición y eliminación se habilitarán con flujos auditados específicos.
-      allow update: if false;
+      allow update: if isCitizen()
+                    && resource.data.mainResponsibleId == request.auth.uid
+                    && request.resource.data.mainResponsibleId == resource.data.mainResponsibleId
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.origin == resource.data.origin
+                    && request.resource.data.status == resource.data.status
+                    && request.resource.data.updatedAt == request.time
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      "name",
+                      "species",
+                      "breed",
+                      "color",
+                      "sex",
+                      "approximateAge",
+                      "size",
+                      "sterilized",
+                      "addressType",
+                      "municipality",
+                      "neighborhoodOrVillage",
+                      "addressOrLocation",
+                      "referencePoint",
+                      "updatedAt"
+                    ]);
       allow delete: if false;
     }
 
-
     match /cases/{caseId} {
-      allow create: if signedIn()
+      allow create: if isCitizen()
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.status == "received"
                     && request.resource.data.municipality == "Zipaquirá"
                     && request.resource.data.type in ["lost", "found", "abuse"]
                     && request.resource.data.protectedIdentity == (request.resource.data.type == "abuse");
 
-      allow read: if signedIn()
-                  && resource.data.createdBy == request.auth.uid;
+      allow read: if (
+                    isCitizen()
+                    && resource.data.createdBy == request.auth.uid
+                  )
+                  || (
+                    isVeterinarian()
+                    && resource.data.assignedTo == request.auth.uid
+                  )
+                  || isAdministrator();
 
-      // La edición y eliminación de reportes se habilitarán con flujos auditados.
-      allow update: if false;
+      // 0) Ciudadano: adjuntar evidencia a su propio reporte.
+      allow update: if (
+                      isCitizen()
+                      && resource.data.createdBy == request.auth.uid
+                      && request.resource.data.createdBy == resource.data.createdBy
+                      && request.resource.data.evidenceUrls is list
+                      && request.resource.data.evidenceStoragePaths is list
+                      && request.resource.data.evidenceUpdatedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "evidenceUrls",
+                        "evidenceStoragePaths",
+                        "evidenceUpdatedAt",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 1) Administrador: asignación inicial received -> assigned.
+                    (
+                      isAdministrator()
+                      && caseWasReceived()
+                      && request.resource.data.status == "assigned"
+                      && request.resource.data.assignedTo is string
+                      && request.resource.data.assignedRole == "veterinarian"
+                      && isActiveVeterinarian(request.resource.data.assignedTo)
+                      && request.resource.data.assignedBy == request.auth.uid
+                      && request.resource.data.assignedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.schemaVersion == 2
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "schemaVersion",
+                        "assignedTo",
+                        "assignedRole",
+                        "assignedBy",
+                        "assignedAt",
+                        "status",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 2) Administrador: reasignación mientras aún no inicia atención.
+                    (
+                      isAdministrator()
+                      && resource.data.status in ["assigned", "asignado"]
+                      && request.resource.data.status == resource.data.status
+                      && request.resource.data.assignedTo is string
+                      && request.resource.data.assignedTo != resource.data.assignedTo
+                      && request.resource.data.assignedRole == "veterinarian"
+                      && isActiveVeterinarian(request.resource.data.assignedTo)
+                      && request.resource.data.assignedBy == request.auth.uid
+                      && request.resource.data.assignedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.schemaVersion == 2
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "schemaVersion",
+                        "assignedTo",
+                        "assignedRole",
+                        "assignedBy",
+                        "assignedAt",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 3) Administrador: prioridad institucional sin tocar el resto del caso.
+                    (
+                      isAdministrator()
+                      && !caseIsCompleted()
+                      && request.resource.data.finalPriority in ["low", "medium", "high", "critical"]
+                      && request.resource.data.priorityReviewedBy == request.auth.uid
+                      && request.resource.data.priorityReviewedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.schemaVersion == 2
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "schemaVersion",
+                        "finalPriority",
+                        "priorityReviewedBy",
+                        "priorityReviewedAt",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 4) Veterinario: transiciones de estado permitidas.
+                    (
+                      isVeterinarian()
+                      && resource.data.assignedTo == request.auth.uid
+                      && request.resource.data.assignedTo == request.auth.uid
+                      && (
+                        (
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+                          && veterinarianStatusTransitionAllowed()
+                          && request.resource.data.updatedAt == request.time
+                        )
+                        ||
+                        // 5) Veterinario: última fotografía clínica del caso.
+                        (
+                          resource.data.status in ["in_progress", "en_atencion", "en atención"]
+                          && request.resource.data.status == resource.data.status
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                            "veterinaryDiagnosis",
+                            "veterinaryObservations",
+                            "veterinaryTreatment",
+                            "veterinaryRecommendations",
+                            "veterinaryUpdatedBy",
+                            "veterinaryUpdatedAt",
+                            "updatedAt"
+                          ])
+                          && request.resource.data.veterinaryDiagnosis is string
+                          && request.resource.data.veterinaryTreatment is string
+                          && request.resource.data.veterinaryUpdatedBy == request.auth.uid
+                          && request.resource.data.veterinaryUpdatedAt == request.time
+                          && request.resource.data.updatedAt == request.time
+                        )
+                      )
+                    );
+
+      allow delete: if false;
+
+      match /attentions/{attentionId} {
+        allow read: if isAdministrator()
+                    || (
+                      isVeterinarian()
+                      && get(/databases/$(database)/documents/cases/$(caseId)).data.assignedTo == request.auth.uid
+                    );
+
+        allow create: if isVeterinarian()
+                      && get(/databases/$(database)/documents/cases/$(caseId)).data.assignedTo == request.auth.uid
+                      && get(/databases/$(database)/documents/cases/$(caseId)).data.status in ["in_progress", "en_atencion", "en atención"]
+                      && request.resource.data.caseId == caseId
+                      && request.resource.data.veterinarianUid == request.auth.uid
+                      && request.resource.data.diagnosis is string
+                      && request.resource.data.treatment is string
+                      && request.resource.data.createdAt == request.time
+                      && request.resource.data.keys().hasAll([
+                        "recordId",
+                        "caseId",
+                        "veterinarianUid",
+                        "diagnosis",
+                        "observations",
+                        "treatment",
+                        "recommendations",
+                        "source",
+                        "createdAt"
+                      ]);
+
+        allow update, delete: if false;
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn()
+                  && resource.data.recipientUid == request.auth.uid;
+
+      allow create: if (
+                      isAdministrator()
+                      && request.resource.data.createdBy == request.auth.uid
+                      && request.resource.data.senderRole == "administrator"
+                      && request.resource.data.type in ["case_assigned", "case_reassigned"]
+                      && isActiveVeterinarian(request.resource.data.recipientUid)
+                      && request.resource.data.read == false
+                      && request.resource.data.createdAt == request.time
+                    )
+                    ||
+                    (
+                      isVeterinarian()
+                      && request.resource.data.createdBy == request.auth.uid
+                      && request.resource.data.senderRole == "veterinarian"
+                      && request.resource.data.type in ["case_in_progress", "case_completed"]
+                      && get(/databases/$(database)/documents/cases/$(request.resource.data.caseId)).data.assignedTo == request.auth.uid
+                      && get(/databases/$(database)/documents/cases/$(request.resource.data.caseId)).data.createdBy == request.resource.data.recipientUid
+                      && request.resource.data.read == false
+                      && request.resource.data.createdAt == request.time
+                    );
+
+      allow update: if signedIn()
+                    && resource.data.recipientUid == request.auth.uid
+                    && request.resource.data.recipientUid == request.auth.uid
+                    && request.resource.data.read == true
+                    && request.resource.data.readAt == request.time
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      "read",
+                      "readAt"
+                    ]);
+
       allow delete: if false;
     }
 
     // Denegación por defecto para toda colección aún no implementada.
+    match /auditLogs/{logId} {
+      allow read: if isAdministrator();
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

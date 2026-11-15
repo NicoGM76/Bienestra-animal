@@ -19,11 +19,15 @@ class CaseFrontendContractTest(unittest.TestCase):
         self.assertIn("eventName === 'cases:saved'", js)
         self.assertIn("eventName === 'cases:list'", js)
 
-    def test_adoption_is_explicitly_demo(self):
+    def test_adoption_is_explicitly_simulated(self):
         html = (ROOT / 'app/src/main/assets/index.html').read_text(encoding='utf-8')
+        js = (ROOT / 'app/src/main/assets/js/app.js').read_text(encoding='utf-8')
         self.assertIn('data-screen="adoptions"', html)
-        self.assertIn('CATÁLOGO DEMO', html)
-        self.assertIn('Datos ficticios para demostración', html)
+        self.assertIn('MÓDULO SIMULADO', html)
+        self.assertIn('simulación funcional', html)
+        self.assertIn('data-adoption-request=', html)
+        self.assertIn('baz-adoption-requests-v1', js)
+        self.assertIn('localStorage', js)
 
 
 if __name__ == '__main__':

@@ -1,23 +1,56 @@
 package com.bienestaranimal.zipaquira
 
 import android.annotation.SuppressLint
+import android.Manifest
 import android.os.Bundle
+import android.os.Build
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import com.bienestaranimal.zipaquira.auth.FirebaseAuthGateway
+import com.bienestaranimal.zipaquira.admin.FirebaseAdminGateway
 import com.bienestaranimal.zipaquira.animals.FirebaseAnimalGateway
 import com.bienestaranimal.zipaquira.cases.FirebaseCaseGateway
+import com.bienestaranimal.zipaquira.evidence.FirebaseEvidenceGateway
+import com.bienestaranimal.zipaquira.notifications.FirebaseNotificationGateway
+import com.bienestaranimal.zipaquira.push.FirebasePushRegistrationGateway
 import com.bienestaranimal.zipaquira.web.AppNavigationPolicy
 import com.bienestaranimal.zipaquira.web.AppWebViewClient
 import com.bienestaranimal.zipaquira.web.WebViewEventSink
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var eventSink: WebViewEventSink
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private val evidencePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (_: SecurityException) {
+                // Algunos proveedores no ofrecen permiso persistente; el URI sigue siendo válido en esta sesión.
+            }
+            if (::eventSink.isInitialized) {
+                eventSink.emit(
+                    "evidence:selected",
+                    JSONObject().put("uri", uri.toString()).toString(),
+                )
+            }
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,12 +81,36 @@ class MainActivity : AppCompatActivity() {
         val authGateway = FirebaseAuthGateway()
         val animalGateway = FirebaseAnimalGateway()
         val caseGateway = FirebaseCaseGateway()
-        val eventSink = WebViewEventSink(webView)
+        val adminGateway = FirebaseAdminGateway()
+        val notificationGateway = FirebaseNotificationGateway()
+        val evidenceGateway = FirebaseEvidenceGateway()
+        val pushRegistrationGateway = FirebasePushRegistrationGateway()
+        eventSink = WebViewEventSink(webView)
         webView.addJavascriptInterface(
-            WebAppInterface(this, authGateway, animalGateway, caseGateway, eventSink),
+            WebAppInterface(
+                context = this,
+                authGateway = authGateway,
+                animalGateway = animalGateway,
+                caseGateway = caseGateway,
+                adminGateway = adminGateway,
+                notificationGateway = notificationGateway,
+                evidenceGateway = evidenceGateway,
+                pushRegistrationGateway = pushRegistrationGateway,
+                eventSink = eventSink,
+                openEvidencePicker = { evidencePicker.launch(arrayOf("image/*")) },
+            ),
             "Android",
         )
         webView.loadUrl(AppNavigationPolicy.ROOT_URL)
+
+        if (
+            Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        pushRegistrationGateway.registerCurrentDevice()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {

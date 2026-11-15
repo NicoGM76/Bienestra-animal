@@ -53,6 +53,70 @@ class FirebaseAnimalGateway(
             .addOnFailureListener { error -> callback(AnimalOutcome.Error(userMessageFor(error))) }
     }
 
+    override fun updateAnimal(animalId: String, draft: AnimalDraft, callback: (AnimalOutcome) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(AnimalOutcome.Error("Debes iniciar sesión para editar un animal."))
+            return
+        }
+
+        val normalizedId = animalId.trim()
+        val value = draft.normalized()
+        val validationError = AnimalInputValidator.validate(value)
+        if (normalizedId.isBlank()) {
+            callback(AnimalOutcome.Error("El animal no es válido."))
+            return
+        }
+        if (validationError != null) {
+            callback(AnimalOutcome.Error(validationError))
+            return
+        }
+
+        val document = firestore.collection("animals").document(normalizedId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(document)
+            if (!snapshot.exists()) {
+                throw IllegalStateException("El animal ya no existe.")
+            }
+            if (snapshot.getString("mainResponsibleId") != user.uid) {
+                throw IllegalStateException("No puedes editar este animal.")
+            }
+
+            transaction.update(
+                document,
+                mapOf(
+                    "name" to value.name,
+                    "species" to value.species,
+                    "breed" to value.breed,
+                    "color" to value.color,
+                    "sex" to value.sex,
+                    "approximateAge" to value.approximateAge,
+                    "size" to value.size,
+                    "sterilized" to value.sterilized,
+                    "addressType" to value.addressType,
+                    "municipality" to value.municipality,
+                    "neighborhoodOrVillage" to value.neighborhoodOrVillage,
+                    "addressOrLocation" to value.addressOrLocation,
+                    "referencePoint" to value.referencePoint,
+                    "updatedAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+        }
+            .addOnSuccessListener { callback(AnimalOutcome.Updated(normalizedId)) }
+            .addOnFailureListener { error ->
+                callback(
+                    AnimalOutcome.Error(
+                        if (error is IllegalStateException) {
+                            error.message ?: "No fue posible actualizar el animal."
+                        } else {
+                            userMessageFor(error)
+                        }
+                    )
+                )
+            }
+    }
+
+
     override fun listMyAnimals(callback: (AnimalOutcome) -> Unit) {
         val user = auth.currentUser
         if (user == null) {
@@ -70,6 +134,16 @@ class FirebaseAnimalGateway(
                         name = document.getString("name").orEmpty(),
                         species = document.getString("species").orEmpty(),
                         breed = document.getString("breed").orEmpty(),
+                        color = document.getString("color").orEmpty(),
+                        sex = document.getString("sex").orEmpty().ifBlank { "No determinado" },
+                        approximateAge = document.getString("approximateAge").orEmpty(),
+                        size = document.getString("size").orEmpty().ifBlank { "Mediano" },
+                        sterilized = document.getBoolean("sterilized") ?: false,
+                        addressType = document.getString("addressType").orEmpty(),
+                        municipality = document.getString("municipality").orEmpty().ifBlank { "Zipaquirá" },
+                        neighborhoodOrVillage = document.getString("neighborhoodOrVillage").orEmpty(),
+                        addressOrLocation = document.getString("addressOrLocation").orEmpty(),
+                        referencePoint = document.getString("referencePoint").orEmpty(),
                         status = document.getString("status") ?: "active",
                     )
                 }.sortedBy { it.name.lowercase() }

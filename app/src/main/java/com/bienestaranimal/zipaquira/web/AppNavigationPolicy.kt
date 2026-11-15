@@ -19,4 +19,16 @@ object AppNavigationPolicy {
             false
         }
     }
+
+    fun isTrustedResource(url: String): Boolean {
+        if (isTrusted(url)) return true
+        return try {
+            val uri = URI(url)
+            if (!uri.scheme.equals("https", ignoreCase = true)) return false
+            val host = uri.host?.lowercase().orEmpty()
+            host == "firebasestorage.googleapis.com" || host == "storage.googleapis.com"
+        } catch (_: Exception) {
+            false
+        }
+    }
 }

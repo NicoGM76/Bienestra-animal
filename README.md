@@ -1,57 +1,109 @@
-# Bienestar Animal Zipaquirá — Demo Final 0.3
+# Bienestar Animal Zipaquirá — Versión 1.0 RC
 
-Demo Android híbrida para la plataforma de gestión y bienestar animal de Zipaquirá, con enfoque prioritario en zonas rurales.
+Aplicación Android híbrida para la gestión y seguimiento de bienestar animal en Zipaquirá, con prioridad en zonas rurales y diversidad de especies.
 
-## Tecnología
+## Estado
 
-- Android: **Kotlin**.
-- Interfaz: **HTML + CSS + JavaScript** dentro de WebView segura.
-- Backend Demo: **Firebase Authentication + Cloud Firestore**.
-- Variante de prueba: `demoDebug` con paquete `com.bienestaranimal.zipaquira.demo`.
-- Compatibilidad objetivo: mínimo Android 6 / API 23; prueba antigua principal Android 7 / API 24.
+- Rama de cierre: `final/1.0`.
+- Versión Android: `1.0.0-rc1`.
+- APK de pre-sustentación: se conserva separado y no se modifica.
+- La rama 1.0 se valida mediante GitHub Actions antes de integrarla a `main`.
 
-## Funciones reales de esta demo
+## Arquitectura
 
-1. Registro ciudadano con Firebase Authentication.
-2. Inicio de sesión real con Firebase Authentication.
-3. Creación de perfil `users/{uid}` en Firestore con rol fijo `citizen`.
-4. Registro de animales en `animals/{animalId}`.
-5. Listado de animales del ciudadano autenticado.
-6. Reportes de **pérdida**, **hallazgo** y **presunto maltrato** en `cases/{caseId}`.
-7. Listado de los reportes del ciudadano y su estado general.
-8. Identidad protegida marcada automáticamente en reportes de presunto maltrato.
-9. Catálogo de adopciones **DEMO** con datos ficticios claramente identificados.
-10. WebView endurecida para impedir navegación y recursos externos no autorizados.
+- Android + Kotlin.
+- El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
+- Interfaz HTML/CSS/JavaScript dentro de WebView endurecida.
+- Firebase Authentication.
+- Cloud Firestore.
+- Firebase Authentication + Cloud Firestore como núcleo desplegado en plan Spark.
+- Notificaciones internas en Firestore con proyección a notificación local Android.
+- Firebase Storage, FCM remoto y Cloud Functions quedan como ampliaciones preparadas, no activas en la versión académica gratuita.
+- Firestore persistent cache para operación offline y sincronización posterior.
 
-## Aún no implementado como backend real
+## Roles
 
-- Fotografías, video y audio con Firebase Storage.
-- GPS/mapa real.
-- Offline con Room + WorkManager.
-- Roles institucionales y dashboards de funcionario/veterinario/coordinador/admin.
-- IA de priorización y asignación sugerida.
-- Backend real de adopciones.
-- Notificaciones FCM.
+### Ciudadano
+- Registro e inicio de sesión.
+- Tablero segmentado con tarjetas.
+- Registro y edición segura de animales.
+- Diversidad de especies: perro, gato, conejo, ave, caballo, bovino, cerdo, cabra y otros.
+- Reportes de pérdida, hallazgo y presunto maltrato.
+- Ubicación manual urbana/rural.
+- Evidencia fotográfica: interfaz preparada, no activa en el build académico gratuito.
+- Seguimiento de casos.
+- Notificaciones internas.
+- Adopciones simuladas con solicitud local para demostración.
+- Operación con caché offline después de una sesión válida.
 
-## Antes de ejecutar
+### Administrador
+- Tablero institucional.
+- Métricas de usuarios, animales y casos.
+- Búsqueda y filtros.
+- Expediente por caso.
+- Prioridad institucional.
+- IA Beta explicable y no vinculante.
+- Asignación y reasignación controlada.
+- Evidencia multimedia reservada para infraestructura ampliada.
+- Actividad reciente disponible cuando exista fuente de auditoría desplegada.
 
-1. Abrir Firebase Console y publicar `firestore.rules`.
-2. Verificar que Email/Password esté habilitado en Authentication.
-3. Abrir el proyecto en Android Studio.
-4. Seleccionar `demoDebug`.
-5. `Sync Project with Gradle Files`.
-6. Ejecutar primero en Android moderno y después en Android 7/API 24.
+### Veterinario
+- Casos asignados.
+- Filtros y resumen de carga.
+- Inicio y cierre controlado de atención.
+- Evidencia multimedia reservada para infraestructura ampliada.
+- Ficha clínica.
+- Historial clínico longitudinal por caso.
+- Notificaciones internas y notificaciones locales Android al consultar avisos nuevos.
 
-## Flujo recomendado de sustentación
+## Offline
 
-1. Crear cuenta ciudadana.
-2. Mostrar usuario creado en Firebase Authentication y perfil en Firestore.
-3. Registrar un animal rural, por ejemplo una cabra.
-4. Mostrar el documento en `animals` y el animal en el portal.
-5. Enviar un reporte de presunto maltrato.
-6. Mostrar que queda `protectedIdentity=true` en Firestore y aparece en “Mis reportes”.
-7. Abrir el catálogo de adopciones y aclarar que es interfaz Demo, no backend definitivo.
+Firestore se inicializa con persistencia local y caché sin límite explícito. La app detecta el estado de conectividad desde Android y muestra modo online/offline. Las escrituras compatibles con Firestore pueden quedar pendientes y sincronizarse al recuperar Internet.
+
+Consideración: el inicio de sesión inicial y la carga de contenido nunca consultado requieren conexión. El modo offline está pensado para una cuenta con sesión previa y datos ya disponibles en caché.
+
+## Evidencias
+
+La versión académica gratuita no activa Firebase Storage porque el proyecto se mantiene en Spark y no vincula facturación. El flujo principal de reportes funciona sin archivos adjuntos. La arquitectura de evidencia multimedia queda preparada para una futura infraestructura ampliada.
+
+## Notificaciones
+
+
+La bandeja interna en Firestore es la fuente funcional principal. Cuando la app consulta avisos nuevos no leídos, Android los refleja mediante una notificación local en el canal `case_updates`. Esto permite demostrar avisos del sistema sin Cloud Functions ni Blaze.
+
+El código de FCM y registro de dispositivos se conserva como ampliación futura, pero no se presenta como push remoto activo en la versión académica gratuita.
+
+## Auditoría
+
+La auditoría automática basada en Cloud Functions queda preparada pero no desplegada en Spark. No se presenta como funcionalidad backend activa en la versión académica gratuita.
+
+## Adopciones
+
+
+El módulo de adopciones se mantiene deliberadamente como simulación funcional para la presentación 1.0. Las solicitudes se guardan localmente en el dispositivo y se identifican claramente como simuladas. No se presenta como backend productivo.
+
+## Compatibilidad
+
+Configuración Android:
+
+- `minSdk = 23`
+- `compileSdk = 35`
+- `targetSdk = 35`
+
+El repositorio incluye una matriz de smoke tests para API 26, 33 y 35. La entrega solo debe afirmar compatibilidad en las APIs que terminen con prueba exitosa.
+
+## Despliegue Firebase antes del APK final
+
+1. Publicar `firestore.rules`.
+2. Verificar Authentication Email/Password.
+3. Mantener el proyecto en plan Spark sin facturación.
+4. No desplegar Storage ni Functions en la versión académica gratuita.
+5. Generar `demoDebug` o el build final seleccionado.
+6. Ejecutar el flujo completo de los tres roles y la prueba offline.
+
+## Flujo final recomendado
+
+
+Ciudadano reporta y adjunta foto → Admin revisa IA/prioridad y asigna → Veterinario consulta evidencia, atiende y registra ficha → ciudadano recibe actualización → auditoría conserva el cambio.
 
 Equipo: Jorge Luis Osorio Silva y Nicolás García Mejía.
-
-Nota técnica: el flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir demo/prod.

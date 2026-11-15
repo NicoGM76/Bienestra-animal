@@ -6,13 +6,76 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 
 class FirebaseAuthGateway(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
 ) : AuthGateway {
+
+    private val supportedRoles = setOf("citizen", "veterinarian", "administrator")
+
+    override fun restoreSession(callback: (AuthOutcome) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(AuthOutcome.NoSession)
+            return
+        }
+
+        val profileRef = firestore.collection("users").document(user.uid)
+        profileRef.get(Source.CACHE)
+            .addOnSuccessListener { cached ->
+                if (cached.exists()) {
+                    callback(profileOutcome(user, cached))
+                } else {
+                    profileRef.get()
+                        .addOnSuccessListener { document -> callback(profileOutcome(user, document)) }
+                        .addOnFailureListener {
+                            callback(AuthOutcome.Error("No fue posible restaurar la sesión. Conéctate una vez para actualizar el perfil."))
+                        }
+                }
+            }
+            .addOnFailureListener {
+                profileRef.get()
+                    .addOnSuccessListener { document -> callback(profileOutcome(user, document)) }
+                    .addOnFailureListener {
+                        callback(AuthOutcome.Error("No fue posible restaurar la sesión. Conéctate una vez para actualizar el perfil."))
+                    }
+            }
+    }
+
+    private fun profileOutcome(user: FirebaseUser, document: DocumentSnapshot): AuthOutcome {
+        if (!document.exists()) {
+            return AuthOutcome.Error("La cuenta no tiene un perfil registrado.")
+        }
+
+        val name = document.getString("name").orEmpty()
+        val activeRole = document.getString("activeRole").orEmpty()
+        val status = document.getString("status").orEmpty()
+        val roles = (document.get("roles") as? List<*>)
+            ?.filterIsInstance<String>()
+            ?: emptyList()
+
+        if (status != "active") {
+            return AuthOutcome.Error("La cuenta no se encuentra activa.")
+        }
+
+        if (activeRole.isBlank() || activeRole !in roles || activeRole !in supportedRoles) {
+            return AuthOutcome.Error("El perfil de usuario no tiene un rol válido para esta versión.")
+        }
+
+        return AuthOutcome.Success(
+            uid = user.uid,
+            email = user.email.orEmpty(),
+            name = name,
+            activeRole = activeRole,
+            roles = roles,
+        )
+    }
 
     override fun signIn(email: String, password: String, callback: (AuthOutcome) -> Unit) {
         val normalizedEmail = email.trim().lowercase()
@@ -23,7 +86,49 @@ class FirebaseAuthGateway(
                     callback(AuthOutcome.Error("No fue posible iniciar sesión."))
                     return@addOnSuccessListener
                 }
-                callback(AuthOutcome.Success(user.uid, user.email.orEmpty()))
+
+                firestore.collection("users").document(user.uid)
+                    .get()
+                    .addOnSuccessListener profile@{ document ->
+                        if (!document.exists()) {
+                            auth.signOut()
+                            callback(AuthOutcome.Error("La cuenta no tiene un perfil registrado."))
+                            return@profile
+                        }
+
+                        val name = document.getString("name").orEmpty()
+                        val activeRole = document.getString("activeRole").orEmpty()
+                        val status = document.getString("status").orEmpty()
+                        val roles = (document.get("roles") as? List<*>)
+                            ?.filterIsInstance<String>()
+                            ?: emptyList()
+
+                        if (status != "active") {
+                            auth.signOut()
+                            callback(AuthOutcome.Error("La cuenta no se encuentra activa."))
+                            return@profile
+                        }
+
+                        if (activeRole.isBlank() || activeRole !in roles || activeRole !in supportedRoles) {
+                            auth.signOut()
+                            callback(AuthOutcome.Error("El perfil de usuario no tiene un rol válido para esta versión."))
+                            return@profile
+                        }
+
+                        callback(
+                            AuthOutcome.Success(
+                                uid = user.uid,
+                                email = user.email.orEmpty(),
+                                name = name,
+                                activeRole = activeRole,
+                                roles = roles,
+                            )
+                        )
+                    }
+                    .addOnFailureListener {
+                        auth.signOut()
+                        callback(AuthOutcome.Error("No fue posible cargar el perfil de usuario."))
+                    }
             }
             .addOnFailureListener { error ->
                 callback(AuthOutcome.Error(userMessageFor(error)))
@@ -60,7 +165,15 @@ class FirebaseAuthGateway(
                 firestore.collection("users").document(user.uid)
                     .set(profileData)
                     .addOnSuccessListener {
-                        callback(AuthOutcome.Success(user.uid, profile.email))
+                        callback(
+                            AuthOutcome.Success(
+                                uid = user.uid,
+                                email = profile.email,
+                                name = profile.name,
+                                activeRole = profile.activeRole,
+                                roles = profile.roles,
+                            )
+                        )
                     }
                     .addOnFailureListener {
                         // Evita dejar una cuenta de Auth huérfana cuando falla la creación del perfil.

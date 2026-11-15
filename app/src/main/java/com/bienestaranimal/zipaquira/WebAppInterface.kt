@@ -1,11 +1,16 @@
 package com.bienestaranimal.zipaquira
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.widget.Toast
 import com.bienestaranimal.zipaquira.auth.AuthGateway
+import com.bienestaranimal.zipaquira.admin.AdminGateway
+import com.bienestaranimal.zipaquira.admin.AdminOutcome
 import com.bienestaranimal.zipaquira.auth.AuthInputValidator
 import com.bienestaranimal.zipaquira.auth.AuthOutcome
 import com.bienestaranimal.zipaquira.animals.AnimalDraft
@@ -16,6 +21,12 @@ import com.bienestaranimal.zipaquira.cases.CaseDraft
 import com.bienestaranimal.zipaquira.cases.CaseGateway
 import com.bienestaranimal.zipaquira.cases.CaseInputValidator
 import com.bienestaranimal.zipaquira.cases.CaseOutcome
+import com.bienestaranimal.zipaquira.notifications.NotificationGateway
+import com.bienestaranimal.zipaquira.notifications.NotificationOutcome
+import com.bienestaranimal.zipaquira.notifications.LocalNotificationManager
+import com.bienestaranimal.zipaquira.evidence.EvidenceGateway
+import com.bienestaranimal.zipaquira.evidence.EvidenceOutcome
+import com.bienestaranimal.zipaquira.push.FirebasePushRegistrationGateway
 import com.bienestaranimal.zipaquira.web.BridgeMessagePolicy
 import com.bienestaranimal.zipaquira.web.WebEventSink
 import org.json.JSONArray
@@ -30,9 +41,52 @@ class WebAppInterface(
     private val authGateway: AuthGateway,
     private val animalGateway: AnimalGateway,
     private val caseGateway: CaseGateway,
+    private val adminGateway: AdminGateway,
+    private val notificationGateway: NotificationGateway,
+    private val evidenceGateway: EvidenceGateway,
+    private val pushRegistrationGateway: FirebasePushRegistrationGateway,
     private val eventSink: WebEventSink,
+    private val openEvidencePicker: () -> Unit,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val localNotificationManager = LocalNotificationManager(context.applicationContext)
+
+    @JavascriptInterface
+    fun getConnectivityStatus(): String {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return "offline"
+        val network = manager.activeNetwork ?: return "offline"
+        val capabilities = manager.getNetworkCapabilities(network) ?: return "offline"
+        val connected = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return if (connected) "online" else "offline"
+    }
+
+    @JavascriptInterface
+    fun restoreSession() {
+        authGateway.restoreSession { outcome ->
+            when (outcome) {
+                is AuthOutcome.Success -> {
+                    pushRegistrationGateway.registerCurrentDevice()
+                    eventSink.emit(
+                        "auth:restored",
+                        JSONObject()
+                            .put("uid", outcome.uid)
+                            .put("email", outcome.email)
+                            .put("name", outcome.name)
+                            .put("activeRole", outcome.activeRole)
+                            .put("roles", JSONArray(outcome.roles))
+                            .toString(),
+                    )
+                }
+                is AuthOutcome.NoSession -> eventSink.emit("auth:no-session", "{}")
+                is AuthOutcome.Error -> eventSink.emit(
+                    "auth:restore-error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+            }
+        }
+    }
 
     @JavascriptInterface
     fun login(email: String, password: String) {
@@ -45,11 +99,21 @@ class WebAppInterface(
         eventSink.emit("auth:loading", JSONObject().put("action", "login").toString())
         authGateway.signIn(email, password) { outcome ->
             when (outcome) {
-                is AuthOutcome.Success -> eventSink.emit(
+                is AuthOutcome.Success -> {
+                    pushRegistrationGateway.registerCurrentDevice()
+                    eventSink.emit(
                     "auth:success",
-                    JSONObject().put("uid", outcome.uid).put("email", outcome.email).toString(),
-                )
+                    JSONObject()
+                        .put("uid", outcome.uid)
+                        .put("email", outcome.email)
+                        .put("name", outcome.name)
+                        .put("activeRole", outcome.activeRole)
+                        .put("roles", JSONArray(outcome.roles))
+                        .toString(),
+                    )
+                }
                 is AuthOutcome.Error -> emitError(outcome.message)
+                is AuthOutcome.NoSession -> Unit
             }
         }
     }
@@ -65,11 +129,21 @@ class WebAppInterface(
         eventSink.emit("auth:loading", JSONObject().put("action", "register").toString())
         authGateway.registerCitizen(name, email, password) { outcome ->
             when (outcome) {
-                is AuthOutcome.Success -> eventSink.emit(
+                is AuthOutcome.Success -> {
+                    pushRegistrationGateway.registerCurrentDevice()
+                    eventSink.emit(
                     "auth:registered",
-                    JSONObject().put("uid", outcome.uid).put("email", outcome.email).toString(),
-                )
+                    JSONObject()
+                        .put("uid", outcome.uid)
+                        .put("email", outcome.email)
+                        .put("name", outcome.name)
+                        .put("activeRole", outcome.activeRole)
+                        .put("roles", JSONArray(outcome.roles))
+                        .toString(),
+                    )
+                }
                 is AuthOutcome.Error -> emitError(outcome.message)
+                is AuthOutcome.NoSession -> Unit
             }
         }
     }
@@ -121,6 +195,51 @@ class WebAppInterface(
                 )
                 is AnimalOutcome.Error -> emitAnimalError(outcome.message)
                 is AnimalOutcome.Listed -> emitAnimalList(outcome)
+                is AnimalOutcome.Updated -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun updateAnimal(animalId: String, payloadJson: String) {
+        val draft = try {
+            val payload = JSONObject(payloadJson)
+            AnimalDraft(
+                name = payload.optString("name"),
+                species = payload.optString("species"),
+                breed = payload.optString("breed"),
+                color = payload.optString("color"),
+                sex = payload.optString("sex", "No determinado"),
+                approximateAge = payload.optString("approximateAge"),
+                size = payload.optString("size", "Mediano"),
+                sterilized = payload.optBoolean("sterilized", false),
+                addressType = payload.optString("addressType"),
+                municipality = payload.optString("municipality", "Zipaquirá"),
+                neighborhoodOrVillage = payload.optString("neighborhoodOrVillage"),
+                addressOrLocation = payload.optString("addressOrLocation"),
+                referencePoint = payload.optString("referencePoint"),
+            )
+        } catch (_: Exception) {
+            emitAnimalError("No fue posible leer los datos del animal.")
+            return
+        }
+
+        val validationError = AnimalInputValidator.validate(draft)
+        if (validationError != null) {
+            emitAnimalError(validationError)
+            return
+        }
+
+        eventSink.emit("animals:loading", JSONObject().put("action", "update").toString())
+        animalGateway.updateAnimal(animalId, draft) { outcome ->
+            when (outcome) {
+                is AnimalOutcome.Updated -> eventSink.emit(
+                    "animals:updated",
+                    JSONObject().put("animalId", outcome.animalId).toString(),
+                )
+                is AnimalOutcome.Error -> emitAnimalError(outcome.message)
+                is AnimalOutcome.Saved -> Unit
+                is AnimalOutcome.Listed -> emitAnimalList(outcome)
             }
         }
     }
@@ -133,6 +252,7 @@ class WebAppInterface(
                 is AnimalOutcome.Listed -> emitAnimalList(outcome)
                 is AnimalOutcome.Error -> emitAnimalError(outcome.message)
                 is AnimalOutcome.Saved -> Unit
+                is AnimalOutcome.Updated -> Unit
             }
         }
     }
@@ -175,6 +295,9 @@ class WebAppInterface(
                 )
                 is CaseOutcome.Error -> emitCaseError(outcome.message)
                 is CaseOutcome.Listed -> emitCaseList(outcome)
+                is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
             }
         }
     }
@@ -187,6 +310,244 @@ class WebAppInterface(
                 is CaseOutcome.Listed -> emitCaseList(outcome)
                 is CaseOutcome.Error -> emitCaseError(outcome.message)
                 is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun loadAssignedCases() {
+        eventSink.emit("vet:loading", JSONObject().put("action", "list").toString())
+        caseGateway.listAssignedCases { outcome ->
+            when (outcome) {
+                is CaseOutcome.Listed -> emitVeterinarianCaseList(outcome)
+                is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
+                is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun updateAssignedCaseStatus(caseId: String, newStatus: String) {
+        eventSink.emit("vet:loading", JSONObject().put("action", "update").toString())
+        caseGateway.updateAssignedCaseStatus(caseId, newStatus) { outcome ->
+            when (outcome) {
+                is CaseOutcome.Updated -> eventSink.emit(
+                    "vet:case-updated",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("status", outcome.status)
+                        .toString(),
+                )
+                is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
+                is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Listed -> Unit
+                is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.HistoryListed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun saveVeterinaryCare(
+        caseId: String,
+        diagnosis: String,
+        observations: String,
+        treatment: String,
+        recommendations: String,
+    ) {
+        eventSink.emit("vet:loading", JSONObject().put("action", "care").toString())
+        caseGateway.saveVeterinaryCare(
+            caseId = caseId,
+            diagnosis = diagnosis,
+            observations = observations,
+            treatment = treatment,
+            recommendations = recommendations,
+        ) { outcome ->
+            when (outcome) {
+                is CaseOutcome.CareSaved -> eventSink.emit(
+                    "vet:care-saved",
+                    JSONObject().put("caseId", outcome.caseId).toString(),
+                )
+                is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
+                is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Updated -> Unit
+                is CaseOutcome.Listed -> Unit
+                is CaseOutcome.HistoryListed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun loadAdminDashboard() {
+        eventSink.emit("admin:loading", "{}")
+        adminGateway.loadDashboard { outcome ->
+            when (outcome) {
+                is AdminOutcome.Loaded -> emitAdminDashboard(outcome)
+                is AdminOutcome.Assigned -> Unit
+                is AdminOutcome.CaseChanged -> Unit
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun assignCaseToVeterinarian(caseId: String, veterinarianUid: String) {
+        eventSink.emit("admin:loading", JSONObject().put("action", "assign").toString())
+        adminGateway.assignCase(caseId, veterinarianUid) { outcome ->
+            when (outcome) {
+                is AdminOutcome.Assigned -> eventSink.emit(
+                    "admin:case-assigned",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("veterinarianUid", outcome.veterinarianUid)
+                        .put("veterinarianName", outcome.veterinarianName)
+                        .toString(),
+                )
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is AdminOutcome.Loaded -> Unit
+                is AdminOutcome.CaseChanged -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun reassignCaseToVeterinarian(caseId: String, veterinarianUid: String) {
+        eventSink.emit("admin:loading", JSONObject().put("action", "reassign").toString())
+        adminGateway.reassignCase(caseId, veterinarianUid) { outcome ->
+            when (outcome) {
+                is AdminOutcome.CaseChanged -> eventSink.emit(
+                    "admin:case-changed",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("action", outcome.action)
+                        .put("veterinarianName", outcome.veterinarianName)
+                        .toString(),
+                )
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is AdminOutcome.Loaded -> Unit
+                is AdminOutcome.Assigned -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun updateAdminCasePriority(caseId: String, priority: String) {
+        eventSink.emit("admin:loading", JSONObject().put("action", "priority").toString())
+        adminGateway.updateCasePriority(caseId, priority) { outcome ->
+            when (outcome) {
+                is AdminOutcome.CaseChanged -> eventSink.emit(
+                    "admin:case-changed",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("action", outcome.action)
+                        .toString(),
+                )
+                is AdminOutcome.Error -> eventSink.emit(
+                    "admin:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is AdminOutcome.Loaded -> Unit
+                is AdminOutcome.Assigned -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun loadClinicalHistory(caseId: String) {
+        eventSink.emit("vet:loading", JSONObject().put("action", "history").toString())
+        caseGateway.listClinicalHistory(caseId) { outcome ->
+            when (outcome) {
+                is CaseOutcome.HistoryListed -> emitClinicalHistory(outcome)
+                is CaseOutcome.Error -> emitVeterinarianError(outcome.message)
+                is CaseOutcome.Saved -> Unit
+                is CaseOutcome.Updated -> Unit
+                is CaseOutcome.CareSaved -> Unit
+                is CaseOutcome.Listed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun loadNotifications() {
+        notificationGateway.listMine { outcome ->
+            when (outcome) {
+                is NotificationOutcome.Listed -> {
+                    localNotificationManager.showUnread(outcome.notifications)
+                    emitNotifications(outcome)
+                }
+                is NotificationOutcome.Error -> eventSink.emit(
+                    "notifications:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is NotificationOutcome.Read -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun markNotificationRead(notificationId: String) {
+        notificationGateway.markRead(notificationId) { outcome ->
+            when (outcome) {
+                is NotificationOutcome.Read -> eventSink.emit(
+                    "notifications:read",
+                    JSONObject().put("notificationId", outcome.notificationId).toString(),
+                )
+                is NotificationOutcome.Error -> eventSink.emit(
+                    "notifications:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
+                is NotificationOutcome.Listed -> Unit
+            }
+        }
+    }
+
+    @JavascriptInterface
+    fun pickEvidenceImage() {
+        mainHandler.post { openEvidencePicker() }
+    }
+
+    @JavascriptInterface
+    fun uploadCaseEvidence(caseId: String, uriString: String) {
+        val uri = try {
+            Uri.parse(uriString)
+        } catch (_: Exception) {
+            eventSink.emit(
+                "evidence:error",
+                JSONObject().put("message", "La fotografía seleccionada no es válida.").toString(),
+            )
+            return
+        }
+
+        eventSink.emit("evidence:uploading", JSONObject().put("caseId", caseId).toString())
+        evidenceGateway.uploadCaseImage(caseId, uri) { outcome ->
+            when (outcome) {
+                is EvidenceOutcome.Uploaded -> eventSink.emit(
+                    "evidence:uploaded",
+                    JSONObject()
+                        .put("caseId", outcome.caseId)
+                        .put("storagePath", outcome.storagePath)
+                        .put("downloadUrl", outcome.downloadUrl)
+                        .toString(),
+                )
+                is EvidenceOutcome.Error -> eventSink.emit(
+                    "evidence:error",
+                    JSONObject().put("message", outcome.message).toString(),
+                )
             }
         }
     }
@@ -215,6 +576,16 @@ class WebAppInterface(
                     .put("name", animal.name)
                     .put("species", animal.species)
                     .put("breed", animal.breed)
+                    .put("color", animal.color)
+                    .put("sex", animal.sex)
+                    .put("approximateAge", animal.approximateAge)
+                    .put("size", animal.size)
+                    .put("sterilized", animal.sterilized)
+                    .put("addressType", animal.addressType)
+                    .put("municipality", animal.municipality)
+                    .put("neighborhoodOrVillage", animal.neighborhoodOrVillage)
+                    .put("addressOrLocation", animal.addressOrLocation)
+                    .put("referencePoint", animal.referencePoint)
                     .put("status", animal.status),
             )
         }
@@ -231,10 +602,170 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
-                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage),
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("evidenceUrls", JSONArray(item.evidenceUrls)),
             )
         }
         eventSink.emit("cases:list", JSONObject().put("cases", cases).toString())
+    }
+
+    private fun emitAdminDashboard(outcome: AdminOutcome.Loaded) {
+        val users = JSONArray()
+        outcome.users.forEach { user ->
+            users.put(
+                JSONObject()
+                    .put("uid", user.uid)
+                    .put("name", user.name)
+                    .put("email", user.email)
+                    .put("activeRole", user.activeRole)
+                    .put("status", user.status),
+            )
+        }
+
+        val animals = JSONArray()
+        outcome.animals.forEach { animal ->
+            animals.put(
+                JSONObject()
+                    .put("id", animal.id)
+                    .put("name", animal.name)
+                    .put("species", animal.species)
+                    .put("status", animal.status),
+            )
+        }
+
+        val cases = JSONArray()
+        outcome.cases.forEach { item ->
+            cases.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("type", item.type)
+                    .put("status", item.status)
+                    .put("finalPriority", item.finalPriority)
+                    .put("description", item.description)
+                    .put("animalCount", item.animalCount)
+                    .put("municipality", item.municipality)
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("addressOrLocation", item.addressOrLocation)
+                    .put("referencePoint", item.referencePoint)
+                    .put("animalCondition", item.animalCondition)
+                    .put("assignedToUid", item.assignedToUid)
+                    .put("assignedToName", item.assignedToName)
+                    .put("aiSuggestedPriority", item.aiSuggestedPriority)
+                    .put("aiPriorityReason", item.aiPriorityReason)
+                    .put("aiModelVersion", item.aiModelVersion)
+                    .put("legacy", item.legacy)
+                    .put("evidenceUrls", JSONArray(item.evidenceUrls)),
+            )
+        }
+
+        val audits = JSONArray()
+        outcome.audits.forEach { item ->
+            audits.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("caseId", item.caseId)
+                    .put("action", item.action)
+                    .put("actorUid", item.actorUid)
+                    .put("createdAtMillis", item.createdAtMillis),
+            )
+        }
+
+        eventSink.emit(
+            "admin:dashboard",
+            JSONObject()
+                .put("userCount", outcome.userCount)
+                .put("animalCount", outcome.animalCount)
+                .put("caseCount", outcome.caseCount)
+                .put("activeCaseCount", outcome.activeCaseCount)
+                .put("citizenCount", outcome.citizenCount)
+                .put("veterinarianCount", outcome.veterinarianCount)
+                .put("administratorCount", outcome.administratorCount)
+                .put("receivedCaseCount", outcome.receivedCaseCount)
+                .put("assignedCaseCount", outcome.assignedCaseCount)
+                .put("inProgressCaseCount", outcome.inProgressCaseCount)
+                .put("completedCaseCount", outcome.completedCaseCount)
+                .put("users", users)
+                .put("animals", animals)
+                .put("cases", cases)
+                .put("audits", audits)
+                .toString(),
+        )
+    }
+
+    private fun emitVeterinarianCaseList(outcome: CaseOutcome.Listed) {
+        val cases = JSONArray()
+        outcome.cases.forEach { item ->
+            cases.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("type", item.type)
+                    .put("status", item.status)
+                    .put("finalPriority", item.finalPriority)
+                    .put("description", item.description)
+                    .put("animalCount", item.animalCount)
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("addressOrLocation", item.addressOrLocation)
+                    .put("referencePoint", item.referencePoint)
+                    .put("animalCondition", item.animalCondition)
+                    .put("aiSuggestedPriority", item.aiSuggestedPriority)
+                    .put("aiPriorityReason", item.aiPriorityReason)
+                    .put("legacy", item.legacy)
+                    .put("veterinaryDiagnosis", item.veterinaryDiagnosis)
+                    .put("veterinaryObservations", item.veterinaryObservations)
+                    .put("veterinaryTreatment", item.veterinaryTreatment)
+                    .put("veterinaryRecommendations", item.veterinaryRecommendations)
+                    .put("evidenceUrls", JSONArray(item.evidenceUrls)),
+            )
+        }
+        eventSink.emit("vet:cases", JSONObject().put("cases", cases).toString())
+    }
+
+    private fun emitClinicalHistory(outcome: CaseOutcome.HistoryListed) {
+        val records = JSONArray()
+        outcome.records.forEach { record ->
+            records.put(
+                JSONObject()
+                    .put("id", record.id)
+                    .put("diagnosis", record.diagnosis)
+                    .put("observations", record.observations)
+                    .put("treatment", record.treatment)
+                    .put("recommendations", record.recommendations)
+                    .put("veterinarianUid", record.veterinarianUid)
+                    .put("createdAtMillis", record.createdAtMillis)
+                    .put("source", record.source),
+            )
+        }
+        eventSink.emit(
+            "vet:history",
+            JSONObject()
+                .put("caseId", outcome.caseId)
+                .put("records", records)
+                .toString(),
+        )
+    }
+
+    private fun emitNotifications(outcome: NotificationOutcome.Listed) {
+        val notifications = JSONArray()
+        outcome.notifications.forEach { item ->
+            notifications.put(
+                JSONObject()
+                    .put("id", item.id)
+                    .put("title", item.title)
+                    .put("body", item.body)
+                    .put("type", item.type)
+                    .put("caseId", item.caseId)
+                    .put("read", item.read)
+                    .put("createdAtMillis", item.createdAtMillis),
+            )
+        }
+        eventSink.emit(
+            "notifications:list",
+            JSONObject().put("notifications", notifications).toString(),
+        )
+    }
+
+    private fun emitVeterinarianError(message: String) {
+        eventSink.emit("vet:error", JSONObject().put("message", message).toString())
     }
 
     private fun emitCaseError(message: String) {

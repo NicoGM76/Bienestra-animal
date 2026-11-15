@@ -155,3 +155,429 @@ textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(47,93,12
   .adoption-card { grid-template-columns:56px 1fr; }
   .adoption-icon { width:56px; height:56px; font-size:28px; }
 }
+
+.metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.metric-card { padding:16px 10px; text-align:center; border:1.5px solid var(--border); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); }
+.metric-card strong { display:block; color:var(--primary); font-size:28px; }
+.metric-card span { display:block; margin-top:6px; color:var(--muted); font-size:13px; }
+
+@media (max-width: 380px) {
+  .metric-grid { grid-template-columns:1fr; }
+}
+
+
+/* Beta 0.4.1 institutional portal expansion */
+.compact-metrics { margin-bottom:8px; }
+.care-context-card {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:14px 0;
+}
+.care-context-card > div {
+  padding:13px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+}
+.care-context-card span,
+.care-context-card strong { display:block; }
+.care-context-card span { color:var(--muted); font-size:12px; margin-bottom:5px; }
+.care-context-card strong { color:var(--primary); font-size:14px; line-height:1.35; }
+textarea:disabled,
+input:disabled {
+  opacity:.72;
+  background:var(--surface-alt);
+  cursor:not-allowed;
+}
+.admin-activity { display:grid; gap:12px; }
+.admin-section {
+  padding:14px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.admin-section-title {
+  display:block;
+  color:var(--primary);
+  margin-bottom:8px;
+}
+.admin-row {
+  display:block;
+  padding:8px 0;
+  color:var(--muted);
+  line-height:1.35;
+  border-top:1px solid var(--border);
+}
+.admin-row:first-of-type { border-top:0; }
+
+@media (max-width: 520px) {
+  .metric-grid { grid-template-columns:repeat(2,1fr); }
+  .compact-metrics { grid-template-columns:repeat(2,1fr); }
+  .care-context-card { grid-template-columns:1fr; }
+}
+
+@media (max-width: 340px) {
+  .metric-grid,
+  .compact-metrics { grid-template-columns:1fr; }
+}
+
+
+/* Beta 0.4.2 admin case assignment */
+.admin-assignment-list {
+  display:grid;
+  gap:12px;
+  margin-bottom:8px;
+}
+.admin-assignment-card {
+  padding:14px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.admin-assignment-card strong,
+.admin-assignment-card span {
+  display:block;
+}
+.admin-assignment-card strong {
+  color:var(--primary);
+  margin-bottom:5px;
+}
+.admin-assignment-card span {
+  color:var(--muted);
+  line-height:1.35;
+  margin-bottom:10px;
+}
+.admin-assignment-card select {
+  width:100%;
+  margin:4px 0 10px;
+}
+
+
+/* Beta 0.5.0 advanced case operations */
+.filter-bar,
+.filter-panel {
+  display:grid;
+  gap:10px;
+  margin:10px 0 14px;
+}
+.filter-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.filter-bar {
+  grid-template-columns:2fr 1fr;
+}
+.admin-case-list,
+.notification-list,
+.clinical-history {
+  display:grid;
+  gap:12px;
+}
+.admin-case-card,
+.notification-card,
+.clinical-record,
+.ai-card {
+  padding:14px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius);
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.admin-case-card {
+  display:grid;
+  gap:8px;
+}
+.admin-case-card .case-card-top,
+.notification-card .notification-top {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.admin-case-card span,
+.notification-card span,
+.clinical-record span {
+  color:var(--muted);
+  line-height:1.4;
+}
+.admin-case-card .legacy-pill,
+.ai-pill {
+  display:inline-flex;
+  width:max-content;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  background:var(--surface-alt);
+  color:var(--primary);
+}
+.notification-card.unread {
+  border-width:2px;
+}
+.notification-card button {
+  margin-top:8px;
+}
+.notification-card small,
+.clinical-record small,
+.ai-card small {
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+}
+.clinical-record {
+  display:grid;
+  gap:7px;
+}
+.clinical-record strong {
+  color:var(--primary);
+}
+.ai-card {
+  background:var(--surface-alt);
+  margin-bottom:12px;
+}
+.ai-card strong {
+  display:block;
+  color:var(--primary);
+  margin-bottom:6px;
+}
+.ai-card p {
+  margin:0;
+  line-height:1.45;
+}
+#adminReassignPanel {
+  margin-top:18px;
+}
+@media (max-width: 520px) {
+  .filter-grid,
+  .filter-bar {
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* Respect semantic visibility even when component styles define display. */
+[hidden] {
+  display: none !important;
+}
+
+
+/* Version 1.0 product dashboard */
+.eyebrow {
+  display:block;
+  margin-bottom:4px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+  color:var(--muted);
+}
+.role-heading { align-items:flex-start; }
+.role-app-icon {
+  display:block;
+  width:38px;
+  height:38px;
+  object-fit:contain;
+  margin:2px 0 14px auto;
+  opacity:.92;
+}
+.online-banner.offline {
+  background:#fff3cd;
+  color:#705400;
+}
+.citizen-journey {
+  display:grid;
+  grid-template-columns:1.4fr repeat(3,1fr);
+  gap:8px;
+  align-items:center;
+  padding:14px;
+  border-radius:16px;
+  background:linear-gradient(135deg, rgba(47,93,126,.12), rgba(83,156,116,.12));
+  border:1px solid var(--border);
+  margin:4px 0 14px;
+}
+.citizen-journey strong { color:var(--primary); }
+.citizen-journey span {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  color:var(--muted);
+}
+.citizen-journey b {
+  display:grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--primary);
+  color:#fff;
+  font-size:11px;
+}
+.segment-tabs {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+  padding:5px;
+  margin:0 0 16px;
+  border-radius:14px;
+  background:var(--surface-alt);
+  border:1px solid var(--border);
+  position:sticky;
+  top:0;
+  z-index:4;
+}
+.segment-tab {
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--muted);
+  font:inherit;
+  font-size:12px;
+  font-weight:800;
+  padding:10px 6px;
+}
+.segment-tab.active {
+  background:var(--surface);
+  color:var(--primary);
+  box-shadow:0 2px 10px rgba(26,55,75,.08);
+}
+.segment-panel { display:none; }
+.segment-panel.active { display:block; }
+.dashboard-card-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.dashboard-card {
+  min-height:144px;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:var(--surface);
+  color:var(--text);
+  text-align:left;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:7px;
+}
+.dashboard-card strong { color:var(--primary); font-size:16px; }
+.dashboard-card small { color:var(--muted); line-height:1.35; }
+.dashboard-icon { font-size:28px; }
+.dashboard-card.dog { background:linear-gradient(150deg,#f7fbff,#eaf4fb); }
+.dashboard-card.alert-card { background:linear-gradient(150deg,#fffafa,#fff0ee); }
+.dashboard-card.lost-card { background:linear-gradient(150deg,#fffdf7,#fff7df); }
+.dashboard-card.found-card { background:linear-gradient(150deg,#f7fff9,#eaf8ef); }
+.dashboard-card.adoption-card-home { background:linear-gradient(150deg,#fbf9ff,#f0ebff); grid-column:1/-1; min-height:118px; }
+.species-ribbon {
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:14px 0 4px;
+  scrollbar-width:none;
+}
+.species-ribbon::-webkit-scrollbar { display:none; }
+.species-ribbon span {
+  flex:0 0 auto;
+  padding:8px 10px;
+  border-radius:999px;
+  background:var(--surface-alt);
+  border:1px solid var(--border);
+  font-size:12px;
+  font-weight:700;
+}
+.section-heading-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.btn.compact { width:auto; min-height:38px; padding:8px 12px; margin:0; }
+.offline-note {
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  margin:18px 0;
+  padding:14px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:var(--surface-alt);
+}
+.offline-note p { margin:0; color:var(--muted); line-height:1.4; }
+.offline-note strong { color:var(--primary); }
+.adoption-request { margin-top:12px; }
+.adoption-request:disabled { opacity:.68; cursor:default; }
+
+@media (max-width:520px) {
+  .citizen-journey { grid-template-columns:1fr; }
+  .citizen-journey span { font-size:13px; }
+  .segment-tabs { grid-template-columns:repeat(2,1fr); position:static; }
+  .dashboard-card-grid { grid-template-columns:1fr; }
+  .dashboard-card.adoption-card-home { grid-column:auto; }
+}
+
+
+/* Version 1.0 evidence workflow */
+.evidence-picker-card {
+  margin:18px 0;
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:linear-gradient(145deg, var(--surface), var(--surface-alt));
+  box-shadow:var(--shadow);
+}
+.evidence-picker-card > div {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+.evidence-picker-card > div > span { font-size:28px; }
+.evidence-picker-card strong { display:block; color:var(--primary); }
+.evidence-picker-card p { margin:4px 0 0; color:var(--muted); line-height:1.4; }
+.evidence-gallery {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:8px 0 18px;
+}
+.evidence-photo {
+  margin:0;
+  overflow:hidden;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  box-shadow:var(--shadow);
+}
+.evidence-photo img {
+  display:block;
+  width:100%;
+  aspect-ratio:4/3;
+  object-fit:cover;
+  background:var(--surface-alt);
+}
+.evidence-photo figcaption {
+  padding:8px 10px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+}
+.evidence-count {
+  display:inline-flex !important;
+  width:max-content;
+  margin-top:8px !important;
+  padding:5px 8px;
+  border-radius:999px;
+  background:var(--surface-alt);
+  color:var(--primary) !important;
+  font-size:12px;
+  font-weight:700;
+}
+.animal-card .btn.compact { margin-top:10px; }
+
+@media (max-width:420px) {
+  .evidence-gallery { grid-template-columns:1fr; }
+}
