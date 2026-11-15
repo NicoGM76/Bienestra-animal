@@ -147,8 +147,25 @@ service cloud.firestore {
                   )
                   || isAdministrator();
 
-      // 1) Administrador: asignación inicial received -> assigned.
+      // 0) Ciudadano: adjuntar evidencia a su propio reporte.
       allow update: if (
+                      isCitizen()
+                      && resource.data.createdBy == request.auth.uid
+                      && request.resource.data.createdBy == resource.data.createdBy
+                      && request.resource.data.evidenceUrls is list
+                      && request.resource.data.evidenceStoragePaths is list
+                      && request.resource.data.evidenceUpdatedAt == request.time
+                      && request.resource.data.updatedAt == request.time
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                        "evidenceUrls",
+                        "evidenceStoragePaths",
+                        "evidenceUpdatedAt",
+                        "updatedAt"
+                      ])
+                    )
+                    ||
+                    // 1) Administrador: asignación inicial received -> assigned.
+                    (
                       isAdministrator()
                       && caseWasReceived()
                       && request.resource.data.status == "assigned"
