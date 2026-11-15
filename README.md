@@ -12,6 +12,7 @@ Aplicación Android híbrida para la gestión y seguimiento de bienestar animal 
 ## Arquitectura
 
 - Android + Kotlin.
+- El flavor activo se expone mediante `BuildConfig.ENVIRONMENT` para distinguir `demo` y `prod`.
 - Interfaz HTML/CSS/JavaScript dentro de WebView endurecida.
 - Firebase Authentication.
 - Cloud Firestore.
