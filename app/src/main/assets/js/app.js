@@ -1240,7 +1240,7 @@
       if (eventName === 'cases:loading') {
         if (data.action === 'save') {
           const online = refreshConnectivityBanners();
-          setCaseBusy(online);
+          setCaseBusy(true);
           setMessage(
             caseMessage,
             online
