@@ -10,4 +10,5 @@ sealed interface AuthOutcome {
     ) : AuthOutcome
 
     data class Error(val message: String) : AuthOutcome
+    data object NoSession : AuthOutcome
 }
