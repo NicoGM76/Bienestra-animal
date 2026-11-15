@@ -157,6 +157,8 @@
   let lastAuthAction = 'login';
   let currentReportType = 'lost';
   let currentCitizenCases = [];
+  let currentCitizenAnimals = [];
+  let currentEditingAnimalId = '';
   let currentVetCases = [];
   let currentVetCaseId = '';
   let currentAdminCases = [];
@@ -171,6 +173,8 @@
   const clearSessionData = () => {
     currentRole = '';
     currentCitizenCases = [];
+    currentCitizenAnimals = [];
+    currentEditingAnimalId = '';
     currentVetCases = [];
     currentVetCaseId = '';
     currentAdminCases = [];
@@ -976,6 +980,7 @@
 
   const renderAnimalList = (animals) => {
     if (!animalList) return;
+    currentCitizenAnimals = Array.isArray(animals) ? animals : [];
     while (animalList.firstChild) animalList.removeChild(animalList.firstChild);
 
     if (!Array.isArray(animals) || animals.length === 0) {
@@ -1009,14 +1014,60 @@
       status.className = 'status ok';
       status.textContent = animal.status === 'active' ? 'Activo' : (animal.status || 'Registrado');
 
-      body.append(name, description, status);
+      const details = document.createElement('span');
+      details.textContent = [
+        animal.sex,
+        animal.approximateAge,
+        animal.sterilized ? 'Esterilizado' : 'No esterilizado',
+        animal.neighborhoodOrVillage
+      ].filter(Boolean).join(' · ');
+
+      const edit = document.createElement('button');
+      edit.className = 'btn ghost compact';
+      edit.dataset.editAnimalId = animal.id;
+      edit.textContent = 'Ver / editar ficha';
+
+      body.append(name, description, status, details, edit);
       card.append(art, body);
       grid.appendChild(card);
     });
     animalList.appendChild(grid);
   };
 
+  const populateAnimalForm = (animal) => {
+    if (!animal) return;
+    currentEditingAnimalId = animal.id || '';
+    const setValue = (id, value) => {
+      const field = document.getElementById(id);
+      if (field) field.value = value || '';
+    };
+    setValue('animalName', animal.name);
+    setValue('animalBreed', animal.breed);
+    setValue('animalColor', animal.color);
+    setValue('animalSex', animal.sex || 'No determinado');
+    setValue('animalAge', animal.approximateAge);
+    setValue('animalSize', animal.size || 'Mediano');
+    setValue('animalMunicipality', animal.municipality || 'Zipaquirá');
+    setValue('animalNeighborhoodOrVillage', animal.neighborhoodOrVillage);
+    setValue('animalAddressOrLocation', animal.addressOrLocation);
+    setValue('animalReferencePoint', animal.referencePoint);
+
+    document.querySelectorAll('.species').forEach(button => {
+      button.classList.toggle('selected', button.dataset.species === animal.species);
+    });
+    document.querySelectorAll('.direction').forEach(button => {
+      button.classList.toggle('selected', button.dataset.direction === animal.addressType);
+    });
+    document.querySelectorAll('[data-sterilized]').forEach(button => {
+      button.classList.toggle('selected-choice', button.dataset.sterilized === String(Boolean(animal.sterilized)));
+    });
+
+    if (saveAnimalButton) saveAnimalButton.textContent = 'Actualizar ficha del animal';
+    go('register');
+  };
+
   const resetAnimalForm = () => {
+    currentEditingAnimalId = '';
     const name = document.getElementById('animalName');
     const breed = document.getElementById('animalBreed');
     const color = document.getElementById('animalColor');
@@ -1027,6 +1078,7 @@
     [name, breed, color, age, neighborhood, address, reference].forEach(input => {
       if (input) input.value = '';
     });
+    if (saveAnimalButton) saveAnimalButton.textContent = 'Guardar animal';
   };
 
   window.BAZNative = {
@@ -1063,14 +1115,15 @@
       }
 
       if (eventName === 'animals:loading') {
-        if (data.action === 'save') {
+        if (data.action === 'save' || data.action === 'update') {
           const online = refreshConnectivityBanners();
           setAnimalBusy(online);
+          const actionLabel = data.action === 'update' ? 'actualización' : 'registro';
           setMessage(
             animalMessage,
             online
-              ? 'Guardando el animal…'
-              : 'Sin conexión: el registro queda pendiente en la caché local y se sincronizará automáticamente.'
+              ? (data.action === 'update' ? 'Actualizando el animal…' : 'Guardando el animal…')
+              : `Sin conexión: la ${actionLabel} queda pendiente en la caché local y se sincronizará automáticamente.`
           );
         }
         return;
@@ -1087,14 +1140,29 @@
         setAnimalBusy(false);
         setMessage(animalMessage, 'Animal registrado correctamente.', 'success');
         toast('Animal registrado correctamente.');
+        currentEditingAnimalId = '';
         resetAnimalForm();
         go('home');
+        setCitizenSegment('animals');
+        requestMyAnimals();
+        return;
+      }
+
+      if (eventName === 'animals:updated') {
+        setAnimalBusy(false);
+        setMessage(animalMessage, 'Ficha del animal actualizada.', 'success');
+        toast('Ficha del animal actualizada.');
+        currentEditingAnimalId = '';
+        resetAnimalForm();
+        go('home');
+        setCitizenSegment('animals');
         requestMyAnimals();
         return;
       }
 
       if (eventName === 'animals:list') {
         renderAnimalList(data.animals || []);
+        return;
       }
 
 
@@ -1235,6 +1303,14 @@
     if (segment) {
       event.preventDefault();
       setCitizenSegment(segment.dataset.citizenSegment || 'services');
+      return;
+    }
+
+    const editAnimal = event.target.closest('[data-edit-animal-id]');
+    if (editAnimal) {
+      event.preventDefault();
+      const animal = currentCitizenAnimals.find(item => item.id === editAnimal.dataset.editAnimalId);
+      populateAnimalForm(animal);
       return;
     }
 
@@ -1476,7 +1552,11 @@
       setMessage(animalMessage, 'El registro de animales requiere ejecutar la app Android.', 'error');
       return;
     }
-    Android.saveAnimal(JSON.stringify(payload));
+    if (currentEditingAnimalId && typeof window.Android.updateAnimal === 'function') {
+      Android.updateAnimal(currentEditingAnimalId, JSON.stringify(payload));
+    } else {
+      Android.saveAnimal(JSON.stringify(payload));
+    }
   });
 
 
