@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 class FirebaseAdminGateway(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -85,24 +86,42 @@ class FirebaseAdminGateway(
                                         toAdminCaseSummary(document, userNames)
                                     }
 
-                                callback(
-                                    AdminOutcome.Loaded(
-                                        userCount = usersSnapshot.size(),
-                                        animalCount = animalsSnapshot.size(),
-                                        caseCount = casesSnapshot.size(),
-                                        activeCaseCount = assignedCaseCount + inProgressCaseCount,
-                                        citizenCount = citizenCount,
-                                        veterinarianCount = veterinarianCount,
-                                        administratorCount = administratorCount,
-                                        receivedCaseCount = receivedCaseCount,
-                                        assignedCaseCount = assignedCaseCount,
-                                        inProgressCaseCount = inProgressCaseCount,
-                                        completedCaseCount = completedCaseCount,
-                                        users = users,
-                                        animals = animals,
-                                        cases = cases,
-                                    )
-                                )
+                                firestore.collection("auditLogs")
+                                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                                    .limit(20)
+                                    .get()
+                                    .addOnSuccessListener { auditSnapshot ->
+                                        val audits = auditSnapshot.documents.map { document ->
+                                            AdminAuditSummary(
+                                                id = document.id,
+                                                caseId = document.getString("caseId").orEmpty(),
+                                                action = document.getString("action").orEmpty(),
+                                                actorUid = document.getString("actorUid").orEmpty(),
+                                                createdAtMillis = document.getTimestamp("createdAt")?.toDate()?.time ?: 0L,
+                                            )
+                                        }
+
+                                        callback(
+                                            AdminOutcome.Loaded(
+                                                userCount = usersSnapshot.size(),
+                                                animalCount = animalsSnapshot.size(),
+                                                caseCount = casesSnapshot.size(),
+                                                activeCaseCount = assignedCaseCount + inProgressCaseCount,
+                                                citizenCount = citizenCount,
+                                                veterinarianCount = veterinarianCount,
+                                                administratorCount = administratorCount,
+                                                receivedCaseCount = receivedCaseCount,
+                                                assignedCaseCount = assignedCaseCount,
+                                                inProgressCaseCount = inProgressCaseCount,
+                                                completedCaseCount = completedCaseCount,
+                                                users = users,
+                                                animals = animals,
+                                                cases = cases,
+                                                audits = audits,
+                                            )
+                                        )
+                                    }
+                                    .addOnFailureListener { callback(AdminOutcome.Error(userMessageFor(it))) }
                             }
                             .addOnFailureListener { callback(AdminOutcome.Error(userMessageFor(it))) }
                     }
