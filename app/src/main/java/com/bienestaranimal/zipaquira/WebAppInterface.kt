@@ -23,6 +23,7 @@ import com.bienestaranimal.zipaquira.cases.CaseInputValidator
 import com.bienestaranimal.zipaquira.cases.CaseOutcome
 import com.bienestaranimal.zipaquira.notifications.NotificationGateway
 import com.bienestaranimal.zipaquira.notifications.NotificationOutcome
+import com.bienestaranimal.zipaquira.notifications.LocalNotificationManager
 import com.bienestaranimal.zipaquira.evidence.EvidenceGateway
 import com.bienestaranimal.zipaquira.evidence.EvidenceOutcome
 import com.bienestaranimal.zipaquira.push.FirebasePushRegistrationGateway
@@ -48,6 +49,7 @@ class WebAppInterface(
     private val openEvidencePicker: () -> Unit,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val localNotificationManager = LocalNotificationManager(context.applicationContext)
 
     @JavascriptInterface
     fun getConnectivityStatus(): String {
@@ -484,7 +486,10 @@ class WebAppInterface(
     fun loadNotifications() {
         notificationGateway.listMine { outcome ->
             when (outcome) {
-                is NotificationOutcome.Listed -> emitNotifications(outcome)
+                is NotificationOutcome.Listed -> {
+                    localNotificationManager.showUnread(outcome.notifications)
+                    emitNotifications(outcome)
+                }
                 is NotificationOutcome.Error -> eventSink.emit(
                     "notifications:error",
                     JSONObject().put("message", outcome.message).toString(),
