@@ -23,8 +23,6 @@ import com.bienestaranimal.zipaquira.push.FirebasePushRegistrationGateway
 import com.bienestaranimal.zipaquira.web.AppNavigationPolicy
 import com.bienestaranimal.zipaquira.web.AppWebViewClient
 import com.bienestaranimal.zipaquira.web.WebViewEventSink
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FirebaseFirestoreSettings
 import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
@@ -79,12 +77,6 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = AppWebViewClient(assetLoader)
         webView.webChromeClient = WebChromeClient()
-
-        val firestore = FirebaseFirestore.getInstance()
-        firestore.firestoreSettings = FirebaseFirestoreSettings.Builder()
-            .setPersistenceEnabled(true)
-            .setCacheSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
-            .build()
 
         val authGateway = FirebaseAuthGateway()
         val animalGateway = FirebaseAnimalGateway()
