@@ -15,6 +15,14 @@ data class AdminAnimalSummary(
     val status: String,
 )
 
+data class AdminAuditSummary(
+    val id: String,
+    val caseId: String,
+    val action: String,
+    val actorUid: String,
+    val createdAtMillis: Long,
+)
+
 data class AdminCaseSummary(
     val id: String,
     val type: String,
@@ -52,6 +60,7 @@ sealed class AdminOutcome {
         val users: List<AdminUserSummary>,
         val animals: List<AdminAnimalSummary>,
         val cases: List<AdminCaseSummary>,
+        val audits: List<AdminAuditSummary>,
     ) : AdminOutcome()
 
     data class Assigned(
