@@ -1,6 +1,8 @@
 package com.bienestaranimal.zipaquira
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -39,6 +41,17 @@ class WebAppInterface(
     private val eventSink: WebEventSink,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    @JavascriptInterface
+    fun getConnectivityStatus(): String {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return "offline"
+        val network = manager.activeNetwork ?: return "offline"
+        val capabilities = manager.getNetworkCapabilities(network) ?: return "offline"
+        val connected = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return if (connected) "online" else "offline"
+    }
 
     @JavascriptInterface
     fun login(email: String, password: String) {
