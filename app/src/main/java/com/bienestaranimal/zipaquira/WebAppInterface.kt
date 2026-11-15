@@ -561,7 +561,8 @@ class WebAppInterface(
                     .put("type", item.type)
                     .put("status", item.status)
                     .put("finalPriority", item.finalPriority)
-                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage),
+                    .put("neighborhoodOrVillage", item.neighborhoodOrVillage)
+                    .put("evidenceUrls", JSONArray(item.evidenceUrls)),
             )
         }
         eventSink.emit("cases:list", JSONObject().put("cases", cases).toString())
@@ -611,7 +612,8 @@ class WebAppInterface(
                     .put("aiSuggestedPriority", item.aiSuggestedPriority)
                     .put("aiPriorityReason", item.aiPriorityReason)
                     .put("aiModelVersion", item.aiModelVersion)
-                    .put("legacy", item.legacy),
+                    .put("legacy", item.legacy)
+                    .put("evidenceUrls", JSONArray(item.evidenceUrls)),
             )
         }
 
@@ -657,7 +659,8 @@ class WebAppInterface(
                     .put("veterinaryDiagnosis", item.veterinaryDiagnosis)
                     .put("veterinaryObservations", item.veterinaryObservations)
                     .put("veterinaryTreatment", item.veterinaryTreatment)
-                    .put("veterinaryRecommendations", item.veterinaryRecommendations),
+                    .put("veterinaryRecommendations", item.veterinaryRecommendations)
+                    .put("evidenceUrls", JSONArray(item.evidenceUrls)),
             )
         }
         eventSink.emit("vet:cases", JSONObject().put("cases", cases).toString())
