@@ -376,6 +376,9 @@ class FirebaseAdminGateway(
             aiPriorityReason = document.getString("aiPriorityReason").orEmpty(),
             aiModelVersion = document.getString("aiModelVersion").orEmpty(),
             legacy = CaseCompatibility.isLegacy(document),
+            evidenceUrls = (document.get("evidenceUrls") as? List<*>)
+                ?.mapNotNull { it as? String }
+                .orEmpty(),
         )
     }
 
